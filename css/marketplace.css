@@ -1,0 +1,18 @@
+.list-group-item-action {
+    border-radius: 8px !important;
+    margin-bottom: 4px;
+    transition: all 0.2s;
+}
+
+.card-title {
+    font-size: 1rem;
+    line-height: 1.2;
+}
+
+.object-fit-cover {
+    object-fit: cover;
+}
+
+.shadow-sm {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+}

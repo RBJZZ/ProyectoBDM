@@ -1,0 +1,274 @@
+
+:root {
+    --day-bg: #f0f2f5;
+    --day-primary: #98b6d8;
+    --day-text: #2d3436;
+    --night-bg: #344561;
+    --night-primary: #4a5f7d;
+    --night-text: #e0e7f3;
+}
+
+body {
+    background-color: var(--day-bg);
+    color: var(--day-text);
+    transition: all 0.3s ease;
+}
+
+body.dark-theme {
+    background-color: var(--night-bg);
+    color: var(--night-text);
+}
+
+.logo{
+    color: var(--day-text)!important
+}
+
+.dark-theme .logo{
+    color: var(--night-text)!important;
+}
+
+.nav-custom {
+    z-index: 1000;
+    background-color: var(--day-primary) !important;
+}
+
+.dark-theme .nav-custom {
+    background-color: var(--night-primary) !important;
+}
+
+.nav-icons {
+    display: flex;
+    align-items: center;
+}
+
+.nav-icons a {
+    color: var(--day-text) !important;
+    transition: all 0.3s ease;
+    padding: 8px;
+}
+
+.dark-theme .nav-icons a {
+    color: var(--night-text) !important;
+}
+
+.nav-icons a:hover {
+    transform: scale(1.1);
+    color: var(--day-primary) !important;
+}
+
+.dark-theme .nav-icons a:hover {
+    color: var(--night-primary) !important;
+}
+
+.nav-icons .position-relative {
+padding-right: 5px;
+}
+
+.input-group {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.badge {
+    font-size: 0.6em;
+    padding: 4px 6px;
+    transform: translate(30%, -50%) !important; 
+    left: auto !important;
+    right: -5px !important;
+    top: 15% !important;
+    background-color: var(--day-primary) !important;
+    color: white !important;
+}
+
+.dark-theme .badge {
+    background-color: var(--night-primary) !important;
+}
+
+.bg-custom {
+    background-color: var(--day-primary) !important;
+    transition: background-color 0.3s ease;
+}
+
+.dark-theme .bg-custom {
+    background-color: var(--night-primary) !important;
+}
+
+.nav-custom {
+    background-color: #bdcddf;
+    /**box-shadow: 0 2px 4px rgba(0,0,0,0.1);**/
+}
+
+.modal-content {
+    background: var(--day-bg);
+    color: var(--day-text);
+    transition: all 0.3s ease;
+}
+
+.dark-theme .modal-content {
+    background: var(--night-bg);
+    color: var(--night-text);
+}
+
+#notificationsModal .modal-content {
+    border: 1px solid var(--day-primary);
+    box-shadow: 0 0 15px rgba(189, 205, 223, 0.2);
+}
+
+.dark-theme #notificationsModal .modal-content {
+    border: 1px solid var(--night-primary);
+    box-shadow: 0 0 15px rgba(74, 95, 125, 0.3);
+}
+
+#postModal .modal-content {
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.dark-theme #postModal .modal-content {
+    background: rgba(52, 69, 97, 0.95);
+}
+
+#postModal .form-select {
+    color: var(--day-text);
+    border: 1px solid var(--day-primary);
+}
+
+.dark-theme #postModal .form-select {
+    color: var(--night-text);
+    border: 1px solid var(--night-primary);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+#postModal .preview-area {
+    border-color: var(--day-primary);
+    background: rgba(189, 205, 223, 0.1);
+}
+
+.dark-theme #postModal .preview-area {
+    border-color: var(--night-primary);
+    background: rgba(74, 95, 125, 0.1);
+}
+
+#postModal .btn-light {
+    background: rgba(189, 205, 223, 0.3);
+    border-color: var(--day-primary);
+    color: var(--day-text);
+}
+
+.dark-theme #postModal .btn-light {
+    background: rgba(74, 95, 125, 0.3);
+    border-color: var(--night-primary);
+    color: var(--night-text);
+}
+
+.dark-theme .modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+
+#notificationsModal .modal-dialog {
+    transform: none !important;
+    top: -220px !important;
+}
+
+@media screen and (max-width: 768px) {
+    #notificationsModal .modal-dialog {
+        top: 0px !important;
+        right: 50px !important;
+    }
+}
+
+.form-control::placeholder {
+    color: rgba(52, 69, 97, 0.6) !important; 
+}
+
+.dark-theme .form-control::placeholder {
+    color: rgba(224, 231, 243, 0.6) !important; 
+}
+
+.shortcut-item {
+    color: var(--day-text) !important;
+    background: rgba(189, 205, 223, 0.1) !important;
+}
+
+.dark-theme .shortcut-item {
+    color: var(--night-text) !important;
+    background: rgba(74, 95, 125, 0.1) !important;
+}
+
+
+.bi-people-fill {
+    color: var(--day-primary) !important;
+}
+
+.dark-theme .bi-people-fill {
+    color: var(--night-primary) !important;
+}
+
+.shortcut-item:hover {
+    background: rgba(189, 205, 223, 0.2) !important;
+}
+
+.dark-theme .shortcut-item:hover {
+    background: rgba(74, 95, 125, 0.2) !important;
+}
+
+.theme-toggle {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: var(--day-primary);
+    color: white;
+}
+
+.dark-theme .theme-toggle {
+    background: var(--night-primary);
+}
+
+.card {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0,0,0,0.1);
+    backdrop-filter: blur(5px);
+}
+
+.dark-theme .card {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255,255,255,0.1);
+    color: var(--night-text);
+}
+
+.form-control {
+    background: rgba(255,255,255,0.8);
+    border: 1px solid var(--day-primary);
+}
+
+.dark-theme .form-control {
+    background: rgba(255,255,255,0.1);
+    border-color: var(--night-primary);
+    color: var(--night-text);
+}
+
+.list-group-item {
+    color: var(--day-text) !important;
+    background: rgba(189, 205, 223, 0.1) !important;
+}
+
+.dark-theme .list-group-item {
+    color: var(--night-text) !important;
+    background: rgba(74, 95, 125, 0.1) !important;
+}
+
+.btn-custom {
+    background-color: var(--day-primary) !important;
+    color: white !important;
+}
+
+.dark-theme .btn-custom {
+    background-color: var(--night-primary) !important;
+}

@@ -1,0 +1,42 @@
+:root {
+    --day-bg: #f0f2f5;
+    --day-primary: #98b6d8;
+    --day-text: #2d3436;
+    --night-bg: #344561;
+    --night-primary: #4a5f7d;
+    --night-text: #e0e7f3;
+}
+
+.rounded-3 {
+    border-radius: 1rem !important;
+}
+
+.overflow-x-auto {
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+}
+
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid #dee2e6 !important;
+}
+
+.bg-light {
+    background-color: #f8f9fa !important;
+}
+
+.chat-custom{
+    background-color: #a5bad4;
+}
+
+.bg-bubble{
+    background-color:#d4e4f7;
+    color:var(--light-text);
+}
+
+.dark-theme .bg-bubble{
+    background-color:#274161;
+    color:var(--night-text);
+}
+
