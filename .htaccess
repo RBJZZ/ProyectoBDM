@@ -1,0 +1,21 @@
+# Activar el motor de reescritura de URLs
+RewriteEngine On
+
+# Establecer la base para las reglas de reescritura
+# Asegúrate de que coincida con la ruta de tu proyecto desde la raíz del servidor web
+RewriteBase /ProyectoBDM/
+
+# ----- Reglas de reescritura -----
+
+# 1. No reescribir si la solicitud es para un archivo existente
+#    (Importante para que CSS, JS, imágenes, etc., funcionen)
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+# 2. No reescribir si la solicitud es para un directorio existente
+RewriteCond %{REQUEST_FILENAME} -d
+# Si alguna de las condiciones anteriores es cierta (-f o -d), no aplicar la siguiente regla
+RewriteRule ^ - [L]
+
+# 3. Reescribir todas las demás solicitudes a index.php
+#    Cualquier URL que NO sea un archivo o directorio existente será
+#    manejada por index.php. El [L] significa "Last rule" (última regla).
+RewriteRule ^ index.php [L]

@@ -6,8 +6,8 @@
     <title>My Feed</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="./css/feed.css">
-    <link rel="stylesheet" href="./css/main.css">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($base_path); ?>Views/css/feed.css">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars($base_path); ?>Views/css/main.css">
     
 </head>
 <body>
@@ -24,10 +24,10 @@
                 <div class="card mb-3 rounded-4">
                   
                     <div class="profile-cover-container" style="height: 150px; position: relative;">
-                        <img src="./pictures/header.jpg" class="profile-cover" 
+                        <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/header.jpg" class="profile-cover" 
                              style="width: 100%; height: 100%; object-fit: cover;">
                      
-                        <img src="./pictures/pic.jpg" 
+                        <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/pic.jpg" 
                              class="profile-img position-absolute top-100 start-50 translate-middle"
                              style="width: 90px; height: 90px; border: 3px solid white;">
                     </div>
@@ -83,7 +83,7 @@
                 <div class="card mb-3">
                     <div class="card-body">
                         <div class="d-flex align-items-center mb-3">
-                            <img src="./pictures/pic.jpg" class="rounded-circle" width="45" height="45" alt="Perfil">
+                            <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/pic.jpg" class="rounded-circle" width="45" height="45" alt="Perfil">
                             <input type="text" class="form-control ms-3 rounded-pill feed-input" placeholder="¿Qué estás pensando?" readonly>
                         </div>
                         <div class="row align-items-center">
@@ -118,14 +118,14 @@
                     <div class="card mb-3">
                         <div class="card-body">
                             <div class="d-flex align-items-center mb-3">
-                                <img src="./pictures/miku.jpg" class="rounded-circle" width="45" height="45" alt="Perfil">
+                                <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/miku.jpg" class="rounded-circle" width="45" height="45" alt="Perfil">
                                 <div class="ms-3">
                                     <h6 class="mb-0">MikuMikuBeam</h6>
                                     <small class="text-muted">Hace 1 hora · <i class="bi bi-globe"></i> Público</small>
                                 </div>
                             </div>
                             <p>¡Nuevo capítulo del manga está increíble! 🏴‍☠️</p>
-                            <img src="./pictures/manga.webp" class="img-fluid rounded mb-3" alt="Publicación">
+                            <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/manga.webp" class="img-fluid rounded mb-3" alt="Publicación">
                             <div class="d-flex justify-content-between">
                                 <button class="btn btn-custom btn-sm">
                                     <i class="bi bi-hand-thumbs-up"></i> 245
@@ -140,14 +140,14 @@
                     <div class="card mb-3">
                         <div class="card-body">
                             <div class="d-flex align-items-center mb-3">
-                                <img src="./pictures/fuyu.jpg" class="rounded-circle" width="45" height="45" alt="Perfil">
+                                <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/fuyu.jpg" class="rounded-circle" width="45" height="45" alt="Perfil">
                                 <div class="ms-3">
                                     <h6 class="mb-0">Fuyusito</h6>
                                     <small class="text-muted">Hace 2 horas · <i class="bi bi-globe"></i> Público</small>
                                 </div>
                             </div>
                             <p>Genshin está muriendo gente :(</p>
-                            <img src="./pictures/meme.jpeg" class="img-fluid rounded mb-3" alt="Publicación">
+                            <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/meme.jpeg" class="img-fluid rounded mb-3" alt="Publicación">
                             <div class="d-flex justify-content-between">
                                 <button class="btn btn-custom btn-sm">
                                     <i class="bi bi-hand-thumbs-up"></i> 12849
@@ -162,14 +162,14 @@
                     <div class="card mb-3">
                         <div class="card-body">
                             <div class="d-flex align-items-center mb-3">
-                                <img src="./pictures/icondog.jpg" class="rounded-circle" width="45" height="45" alt="Perfil">
+                                <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/icondog.jpg" class="rounded-circle" width="45" height="45" alt="Perfil">
                                 <div class="ms-3">
                                     <h6 class="mb-0">Perritos que curan la depresión</h6>
                                     <small class="text-muted">Hace 23 horas · <i class="bi bi-globe"></i> Público</small>
                                 </div>
                             </div>
                             <p>Raza, un perro atropelló mi carro y me regañaron, se cancela todo</p>
-                            <img src="./pictures/dog.jpg" class="img-fluid rounded mb-3" alt="Publicación">
+                            <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/dog.jpg" class="img-fluid rounded mb-3" alt="Publicación">
                             <div class="d-flex justify-content-between">
                                 <button class="btn btn-custom btn-sm">
                                     <i class="bi bi-hand-thumbs-up"></i> 342
@@ -192,7 +192,7 @@
                         <h6 class="card-title mb-3">Amigos activos</h6>
                         <div class="list-group">
                             <div class="d-flex align-items-center mb-3">
-                                <img src="./pictures/cat.jpg" class="active-friend-img">
+                                <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/cat.jpg" class="active-friend-img">
                                 <div>
                                     <div class="fw-bold">Jhorson</div>
                                     <small class="text-muted">En línea</small>
@@ -200,7 +200,7 @@
                             </div>
 
                             <div class="d-flex align-items-center mb-3">
-                                <img src="./pictures/cat.jpg" class="active-friend-img">
+                                <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/cat.jpg" class="active-friend-img">
                                 <div>
                                     <div class="fw-bold">Jhorson</div>
                                     <small class="text-muted">En línea</small>
@@ -208,7 +208,7 @@
                             </div>
 
                             <div class="d-flex align-items-center mb-3">
-                                <img src="./pictures/cat.jpg" class="active-friend-img">
+                                <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/cat.jpg" class="active-friend-img">
                                 <div>
                                     <div class="fw-bold">Jhorson</div>
                                     <small class="text-muted">En línea</small>
@@ -216,7 +216,7 @@
                             </div>
 
                             <div class="d-flex align-items-center mb-3">
-                                <img src="./pictures/cat.jpg" class="active-friend-img">
+                                <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/cat.jpg" class="active-friend-img">
                                 <div>
                                     <div class="fw-bold">Jhorson</div>
                                     <small class="text-muted">En línea</small>
@@ -234,7 +234,7 @@
                         <div class="list-group">
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <div class="d-flex align-items-center">
-                                    <img src="./pictures/meme icon.jpg" class="active-friend-img">
+                                    <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/meme icon.jpg" class="active-friend-img">
                                     <div>
                                         <div class="fw-bold">Irisbane</div>
                                         <small class="text-muted">25 amigos en común</small>
@@ -245,7 +245,7 @@
 
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <div class="d-flex align-items-center">
-                                    <img src="./pictures/meme icon.jpg" class="active-friend-img">
+                                    <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/meme icon.jpg" class="active-friend-img">
                                     <div>
                                         <div class="fw-bold">Irisbane</div>
                                         <small class="text-muted">25 amigos en común</small>
@@ -256,7 +256,7 @@
 
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <div class="d-flex align-items-center">
-                                    <img src="./pictures/meme icon.jpg" class="active-friend-img">
+                                    <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/meme icon.jpg" class="active-friend-img">
                                     <div>
                                         <div class="fw-bold">Irisbane</div>
                                         <small class="text-muted">25 amigos en común</small>
@@ -267,7 +267,7 @@
 
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <div class="d-flex align-items-center">
-                                    <img src="./pictures/meme icon.jpg" class="active-friend-img">
+                                    <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/meme icon.jpg" class="active-friend-img">
                                     <div>
                                         <div class="fw-bold">Irisbane</div>
                                         <small class="text-muted">25 amigos en común</small>
@@ -292,7 +292,7 @@
 
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="./js/modal.js"></script>
-    <script src="./js/main.js"></script>
+    <script src="<?php echo htmlspecialchars($base_path); ?>Views/js/modal.js"></script>
+    <script src="<?php echo htmlspecialchars($base_path); ?>Views/js/main.js"></script>
 </body>
 </html>
