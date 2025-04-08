@@ -68,6 +68,11 @@ document.addEventListener("DOMContentLoaded", function() {
                         <a href="./marketplace.html" class="text-dark mx-3" title="Mercado">
                             <i class="bi bi-cart3 fs-5"></i>
                         </a>
+
+                        <a href="/ProyectoBDM/logout" class="text-dark mx-3" title="Cerrar sesión">
+                            <i class="bi bi-box-arrow-right fs-5"></i>
+                        </a>
+
                     </div>
                 </div>
             </div>

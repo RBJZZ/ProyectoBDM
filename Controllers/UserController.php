@@ -380,7 +380,7 @@ class UserController {
             $fileSize = $_FILES['foto_perfil']['size'];
              error_log("handleProfileUpdate: Procesando foto_perfil. Tmp path: $fileTmpPath, Size: $fileSize");
 
-            /
+            
             if ($fileSize > 5 * 1024 * 1024) {
                  error_log("handleProfileUpdate: Error - foto_perfil excede tamaño (5MB).");
                  http_response_code(400);
@@ -532,6 +532,115 @@ class UserController {
         }
          error_log("--- handleProfileUpdate TERMINADO (User ID: $userId) ---");
     }
+
+    public function verifyCurrentPassword() {
+        if (session_status() == PHP_SESSION_NONE) { session_start(); }
+
+        
+        if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true || !isset($_SESSION['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'No autorizado.']);
+            exit();
+        }
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+             http_response_code(405);
+             echo json_encode(['success' => false, 'message' => 'Método no permitido.']);
+             exit();
+        }
+
+        header('Content-Type: application/json');
+        $userId = $_SESSION['user_id'];
+        $currentPasswordAttempt = $_POST['currentPassword'] ?? null;
+
+        if (empty($currentPasswordAttempt)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'No se proporcionó la contraseña actual.']);
+            exit();
+        }
+
+        try {
+            $userModel = new User();
+            
+            $userData = $userModel->obtenerPerfilUsuario($userId);
+
+            if ($userData && isset($userData['usr_contrasena'])) {
+                if (password_verify($currentPasswordAttempt, $userData['usr_contrasena'])) {
+                    
+                    echo json_encode(['success' => true]);
+                } else {
+                    
+                    echo json_encode(['success' => false, 'message' => 'La contraseña actual es incorrecta.']);
+                }
+            } else {
+                
+                error_log("verifyCurrentPassword: No se encontró usuario o hash para ID: $userId");
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'Error al verificar la contraseña. Inténtalo de nuevo.']);
+            }
+        } catch (Exception $e) {
+            error_log("Excepción en verifyCurrentPassword para User ID $userId: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Error interno del servidor.']);
+        }
+        exit(); 
+    }
+
+    public function updatePassword() {
+        if (session_status() == PHP_SESSION_NONE) { session_start(); }
+
+       
+        if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true || !isset($_SESSION['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'No autorizado.']);
+            exit();
+        }
+         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+             http_response_code(405);
+             echo json_encode(['success' => false, 'message' => 'Método no permitido.']);
+             exit();
+        }
+
+        header('Content-Type: application/json');
+        $userId = $_SESSION['user_id'];
+        $newPassword = $_POST['newPassword'] ?? null;
+
+       
+        if (empty($newPassword) || strlen($newPassword) < 6) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'La nueva contraseña debe tener al menos 6 caracteres.']);
+            exit();
+        }
+
+      
+        $newPasswordHash = password_hash($newPassword, PASSWORD_DEFAULT);
+        if ($newPasswordHash === false) {
+             error_log("updatePassword: Error al hashear contraseña para User ID $userId");
+             http_response_code(500);
+             echo json_encode(['success' => false, 'message' => 'Error interno al procesar la contraseña.']);
+             exit();
+        }
+
+        try {
+            $userModel = new User();
+           
+            $success = $userModel->actualizarContrasena($userId, $newPasswordHash);
+
+            if ($success) {
+                echo json_encode(['success' => true, 'message' => 'Contraseña actualizada con éxito.']);
+                 
+            } else {
+                error_log("updatePassword: userModel->actualizarContrasena falló para User ID $userId");
+                http_response_code(500);
+                echo json_encode(['success' => false, 'message' => 'No se pudo actualizar la contraseña en la base de datos.']);
+            }
+        } catch (Exception $e) {
+            error_log("Excepción en updatePassword para User ID $userId: " . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Error interno del servidor al actualizar la contraseña.']);
+        }
+        exit(); 
+    }
+
 
     private function redirectToLogin() {
         global $base_path; 

@@ -105,6 +105,12 @@ if ($coverPicData && $coverPicMime) {
                                 data-bs-target="#settingsModal">
                                 <i class="bi bi-pencil-fill"></i> Editar Perfil    
                         </button>
+                        <button class="btn btn-custom rounded-pill mb-2"
+                                data-bs-toggle="modal"
+                                data-bs-target="#changePasswordModal">
+                            <i class="bi bi-key-fill"></i>
+                        </button>
+
                         <button onclick="showInsightsModal()" class="btn btn-custom rounded-pill mb-2">
                             <i class="bi bi-graph-up"></i> Ver Insights
                         </button>
@@ -137,7 +143,7 @@ if ($coverPicData && $coverPicMime) {
                             <ul class="list-group list-group-flush">
                                
                                 <li class="list-group-item d-flex align-items-center">
-                                    <img src="<?php echo htmlspecialchars($base_path)?>pictures/fuyu.jpg" class="rounded-circle me-2" width="40" height="40">
+                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/fuyu.jpg" class="rounded-circle me-2" width="40" height="40">
                                     <span class="flex-grow-1">Fuyusito</span>
                                     <button class="btn btn-sm btn-custom rounded-pill">Añadir</button>
                                 </li>
@@ -193,39 +199,39 @@ if ($coverPicData && $coverPicMime) {
                                 
                                
                                 <div class="col-4">
-                                    <img src="./pictures/img.jpg" class="img-preview rounded">
+                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/img.jpg" class="img-preview rounded">
                                 </div>
 
                                 <div class="col-4">
-                                    <img src="./pictures/img2.jpg" class="img-preview rounded">
+                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/img2.jpg" class="img-preview rounded">
                                 </div>
 
                                 <div class="col-4">
-                                    <img src="./pictures/img3.jpg" class="img-preview rounded">
+                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/img3.jpg" class="img-preview rounded">
                                 </div>
 
                                 <div class="col-4">
-                                    <img src="./pictures/img4.jpg" class="img-preview rounded">
+                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/img4.jpg" class="img-preview rounded">
                                 </div>
 
                                 <div class="col-4">
-                                    <img src="./pictures/img5.jpg" class="img-preview rounded">
+                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/img5.jpg" class="img-preview rounded">
                                 </div>
 
                                 <div class="col-4">
-                                    <img src="./pictures/img6.jpg" class="img-preview rounded">
+                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/img6.jpg" class="img-preview rounded">
                                 </div>
 
                                 <div class="col-4">
-                                    <img src="./pictures/miku.jpg" class="img-preview rounded">
+                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/miku.jpg" class="img-preview rounded">
                                 </div>
 
                                 <div class="col-4">
-                                    <img src="./pictures/cat.jpg" class="img-preview rounded">
+                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/cat.jpg" class="img-preview rounded">
                                 </div>
 
                                 <div class="col-4">
-                                    <img src="./pictures/meme icon.jpg" class="img-preview rounded">
+                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/meme icon.jpg" class="img-preview rounded">
                                 </div>
                             
                             </div>
@@ -274,6 +280,7 @@ if ($coverPicData && $coverPicMime) {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="<?php echo htmlspecialchars($base_path)?>Views/js/validation.js"></script>
     <script src="<?php echo htmlspecialchars($base_path); ?>Views/js/modal.js"></script>
     <script src="<?php echo htmlspecialchars($base_path); ?>Views/js/main.js"></script>
 </body>

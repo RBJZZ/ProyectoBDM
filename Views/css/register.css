@@ -287,39 +287,116 @@ select.form-control:focus {
     margin-top: -0.5rem;
 }
 
-/* VALIDACIONES */
 
-.form-control.is-valid {
-    border-color: #28a745 !important;
-    background: rgba(40, 167, 69, 0.1) !important;
+.form-control,
+.form-select {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--accent-color);
+    color: var(--text-color);
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin-bottom: 0; 
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+    
+    background-repeat: no-repeat;
+    background-position: right calc(0.375em + 0.1875rem) center; 
+    background-size: calc(0.75em + 0.375rem) calc(0.75em + 0.375rem); 
 }
 
-.form-control.is-invalid {
-    border-color: #dc3545 !important;
-    background: rgba(220, 53, 69, 0.1) !important;
+.form-control::placeholder {
+    color: rgba(224, 231, 243, 0.7); 
+    opacity: 1;
 }
 
-.form-control.is-warning {
-    border-color: #ffc107 !important;
-    background: rgba(255, 193, 7, 0.1) !important;
+.form-control:focus,
+.form-select:focus {
+    background-color: rgba(255, 255, 255, 0.15); 
+    border-color: #a1b0c4; 
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(74, 95, 125, 0.35); 
 }
+
+
+.form-control.is-valid,
+.form-select.is-valid {
+    border-color: #28a745; 
+    
+}
+.form-control.is-valid:focus,
+.form-select.is-valid:focus {
+    border-color: #28a745;
+    box-shadow: 0 0 0 0.25rem rgba(40, 167, 69, 0.25); 
+}
+
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: #dc3545; 
+    
+}
+.form-control.is-invalid:focus,
+.form-select.is-invalid:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25); 
+}
+
 
 .invalid-feedback {
-    color: #dc3545;
-    font-size: 0.875em;
-    margin-top: -0.5rem;
-    margin-bottom: 1rem;
-}
-
-.password-strength {
-    height: 3px;
+    display: none; 
     width: 100%;
-    margin-top: -0.5rem;
-    margin-bottom: 1rem;
-    transition: all 0.3s ease;
+    margin-top: 0.25rem; 
+    margin-bottom: 0.75rem; 
+    font-size: 0.875em;
+    color: #f06e7f; 
+   
+    font-weight: 500; 
 }
 
-.strength-weak { background: #dc3545; }
-.strength-medium { background: #ffc107; }
-.strength-strong { background: #28a745; }
+.is-invalid ~ .invalid-feedback {
+    display: block;
+}
 
+
+select.form-control,
+select.form-select { 
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23e0e7f3' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e"); /* Icono de flecha personalizado */
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px; 
+    padding-right: 2.5rem; 
+}
+
+
+select.form-select.is-valid,
+select.form-select.is-invalid {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23e0e7f3' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e"), var(--bs-form-select-bg-icon); /* Combina tu flecha con la de BS */
+    background-position: right 0.75rem center, center right 2.25rem; 
+    background-size: 16px 12px, var(--bs-form-select-bg-size); 
+}
+
+
+select.form-select option {
+    background-color: var(--main-color); 
+    color: var(--text-color);
+}
+
+.is-invalid + .invalid-feedback {
+    margin-bottom: 0 !important; 
+}
+
+.form-row + .form-row {
+    margin-top: 0; 
+}
+
+
+.form-row .form-control,
+.form-row .form-select {
+    margin-bottom: 0;
+}
+
+
+#settingsModal .invalid-feedback {
+   color: #dc3545; 
+   
+}

@@ -296,6 +296,59 @@ function createSettingsModal() {
     const selectCiudad = modalElement.querySelector('#editCiudad');
     const settingsForm = modalElement.querySelector('#profileSettingsForm'); 
 
+    //CODIGO VALIDACIONES
+
+    const editNombreInput = settingsForm.elements['nombre'];
+    const editApellidoPInput = settingsForm.elements['apellidoPaterno'];
+    const editApellidoMInput = settingsForm.elements['apellidoMaterno'];
+    const editFechaNacInput = settingsForm.elements['fechaNacimiento'];
+    const editGeneroSelect = settingsForm.elements['genero'];
+    const editBioTextarea = settingsForm.elements['biografia']; 
+    const editTelefonoInput = settingsForm.elements['telefono']; 
+    const editPaisSelect = settingsForm.elements['pais']; 
+    const editProvinciaSelect = settingsForm.elements['provincia']; 
+    const editCiudadSelect = settingsForm.elements['ciudad']; 
+
+    const fieldsToValidateModal = {
+        'nombre': [validateName], 
+        'apellidoPaterno': [validateName], 
+        'apellidoMaterno': [validateName], 
+        'fechaNacimiento': [validateDate, null], 
+        'genero': [validateSelection], 
+        'telefono': [validatePhone], 
+        'pais': [validateSelection], 
+        'provincia': [validateSelection],
+        'ciudad': [validateSelection] 
+        
+    };
+
+     
+     Object.keys(fieldsToValidateModal).forEach(name => {
+        const inputElement = settingsForm.elements[name];
+        if (inputElement) {
+            const [validationFn, ...args] = fieldsToValidateModal[name];
+            const eventType = (inputElement.type === 'checkbox' || inputElement.type === 'radio' || inputElement.tagName === 'SELECT') ? 'change' : 'blur';
+
+            inputElement.addEventListener(eventType, () => {
+               
+                validationFn(inputElement, ...args);
+            });
+
+            
+             if (!inputElement.required && (inputElement.value === '' || (inputElement.tagName === 'SELECT' && inputElement.value === ''))) {
+                 inputElement.classList.remove('is-invalid', 'is-valid');
+                 const feedback = inputElement.closest('.mb-3, .form-group')?.querySelector('.invalid-feedback');
+                 if(feedback) feedback.textContent = '';
+            }
+        }
+    });
+
+
+
+    //FIN CODIGO VALIDACIONES
+
+
+
     if (coverInput) {
         coverInput.addEventListener('change', function(e) {
             handleImageUpload(e.target.files[0], 'coverPreview');
@@ -489,6 +542,16 @@ function createSettingsModal() {
             e.preventDefault();
             console.log('Default Prevented EJECUTADO.');
 
+            const isFormValid = validateForm(settingsForm, fieldsToValidateModal);
+
+            if (!isFormValid) {
+                console.log('Formulario de EDICIÓN inválido. No se enviará.');
+                // El feedback visual y el focus ya lo maneja validateForm
+                return; // Detiene la ejecución si hay errores
+            }
+
+            console.log('Formulario de EDICIÓN válido. Procediendo con FormData y Fetch...');
+
             const formData = new FormData(settingsForm);
             console.log("FormData creada:");
              for (let [key, value] of formData.entries()) {
@@ -554,6 +617,251 @@ function createSettingsModal() {
     }
 
       
+
+}
+
+//////////// VENTANA MODAL CONTRASEÑA
+
+function createChangePasswordModal() {
+    const modalHTML = `
+    <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="changePasswordModalTitle">Verificar Contraseña Actual</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body m-3">
+                    <!-- Paso 1: Verificar Contraseña Actual -->
+                    <div id="verifyPasswordStep">
+                        <form id="verifyPasswordForm">
+                            <div class="mb-3">
+                                <label for="currentPasswordInput" class="form-label">Ingresa tu contraseña actual:</label>
+                                <input type="password" class="form-control" id="currentPasswordInput" required>
+                                <div id="verifyPasswordError" class="invalid-feedback d-block"></div>
+                            </div>
+                            <button type="submit" class="btn btn-custom w-100" id="verifyPasswordBtn">Verificar</button>
+                        </form>
+                    </div>
+
+                    <!-- Paso 2: Establecer Nueva Contraseña (inicialmente oculto) -->
+                    <div id="setNewPasswordStep" style="display: none;">
+                        <form id="setNewPasswordForm">
+                            <div class="mb-3">
+                                <label for="newPasswordInput" class="form-label">Nueva Contraseña:</label>
+                                <input type="password" class="form-control" id="newPasswordInput" required minlength="6">
+                                <!-- Puedes agregar un indicador de fortaleza aquí si quieres -->
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirmPasswordInput" class="form-label">Confirmar Nueva Contraseña:</label>
+                                <input type="password" class="form-control" id="confirmPasswordInput" required minlength="6">
+                            </div>
+                            <div id="newPasswordError" class="alert alert-danger d-none" role="alert"></div>
+                            <button type="submit" class="btn btn-success w-100" id="savePasswordBtn">Guardar Nueva Contraseña</button>
+                        </form>
+                    </div>
+
+                     <!-- Mensaje de éxito (inicialmente oculto) -->
+                     <div id="passwordSuccessMessage" class="alert alert-success d-none mt-3" role="alert">
+                        ¡Contraseña actualizada con éxito!
+                     </div>
+
+                </div>
+                 <div class="modal-footer d-none" id="changePasswordModalFooter">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                 </div>
+            </div>
+        </div>
+    </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+    const modalElement = document.getElementById('changePasswordModal');
+    const verifyForm = document.getElementById('verifyPasswordForm');
+    const newPasswordForm = document.getElementById('setNewPasswordForm');
+    const verifyStepDiv = document.getElementById('verifyPasswordStep');
+    const newPasswordStepDiv = document.getElementById('setNewPasswordStep');
+    const verifyPasswordBtn = document.getElementById('verifyPasswordBtn');
+    const savePasswordBtn = document.getElementById('savePasswordBtn');
+    const verifyErrorDiv = document.getElementById('verifyPasswordError');
+    const newPasswordErrorDiv = document.getElementById('newPasswordError');
+    const successMessageDiv = document.getElementById('passwordSuccessMessage');
+    const modalTitle = document.getElementById('changePasswordModalTitle');
+    const currentPasswordInput = document.getElementById('currentPasswordInput');
+    const newPasswordInput = document.getElementById('newPasswordInput');
+    const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+    const modalFooter = document.getElementById('changePasswordModalFooter');
+    const closeButton = modalElement.querySelector('.btn-close');
+
+    
+    verifyForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        verifyErrorDiv.textContent = ''; 
+        verifyPasswordBtn.disabled = true;
+        verifyPasswordBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Verificando...';
+
+        const currentPassword = currentPasswordInput.value;
+
+        try {
+            const response = await fetch(window.basePath + 'profile/verify-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest' 
+                },
+                body: `currentPassword=${encodeURIComponent(currentPassword)}`
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                
+                verifyStepDiv.style.display = 'none';
+                newPasswordStepDiv.style.display = 'block';
+                modalTitle.textContent = 'Establecer Nueva Contraseña';
+                closeButton.style.display = 'none'; 
+                modalElement.setAttribute('data-bs-backdrop', 'static'); 
+                modalElement.setAttribute('data-bs-keyboard', 'false');
+            } else {
+                
+                verifyErrorDiv.textContent = data.message || 'La contraseña actual es incorrecta.';
+                currentPasswordInput.classList.add('is-invalid');
+            }
+        } catch (error) {
+            console.error('Error verificando contraseña:', error);
+            verifyErrorDiv.textContent = 'Error de conexión. Inténtalo de nuevo.';
+        } finally {
+            verifyPasswordBtn.disabled = false;
+            verifyPasswordBtn.innerHTML = 'Verificar';
+        }
+    });
+
+    
+    currentPasswordInput.addEventListener('input', () => {
+        if (currentPasswordInput.classList.contains('is-invalid')) {
+            currentPasswordInput.classList.remove('is-invalid');
+            verifyErrorDiv.textContent = '';
+        }
+    });
+
+
+    
+    newPasswordForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        newPasswordErrorDiv.classList.add('d-none'); 
+        newPasswordErrorDiv.textContent = '';
+        newPasswordInput.classList.remove('is-invalid');
+        confirmPasswordInput.classList.remove('is-invalid');
+
+        const newPassword = newPasswordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+
+        
+        if (newPassword.length < 6) {
+             newPasswordErrorDiv.textContent = 'La nueva contraseña debe tener al menos 6 caracteres.';
+             newPasswordErrorDiv.classList.remove('d-none');
+             newPasswordInput.classList.add('is-invalid');
+             return;
+        }
+        if (newPassword !== confirmPassword) {
+            newPasswordErrorDiv.textContent = 'Las nuevas contraseñas no coinciden.';
+            newPasswordErrorDiv.classList.remove('d-none');
+            
+            newPasswordInput.classList.add('is-invalid');
+            confirmPasswordInput.classList.add('is-invalid');
+            return;
+        }
+
+        savePasswordBtn.disabled = true;
+        savePasswordBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+
+        try {
+            const response = await fetch(window.basePath + 'profile/update-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: `newPassword=${encodeURIComponent(newPassword)}`
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                
+                newPasswordStepDiv.style.display = 'none'; 
+                successMessageDiv.classList.remove('d-none'); 
+                modalTitle.textContent = 'Éxito';
+                modalFooter.classList.remove('d-none'); 
+                
+                modalElement.removeAttribute('data-bs-backdrop');
+                modalElement.removeAttribute('data-bs-keyboard');
+                closeButton.style.display = 'block'; 
+
+
+            } else {
+              
+                newPasswordErrorDiv.textContent = data.message || 'Error al guardar la nueva contraseña.';
+                newPasswordErrorDiv.classList.remove('d-none');
+            }
+        } catch (error) {
+            console.error('Error guardando contraseña:', error);
+            newPasswordErrorDiv.textContent = 'Error de conexión al guardar. Inténtalo de nuevo.';
+            newPasswordErrorDiv.classList.remove('d-none');
+        } finally {
+            savePasswordBtn.disabled = false;
+            savePasswordBtn.innerHTML = 'Guardar Nueva Contraseña';
+        }
+    });
+
+     
+     newPasswordInput.addEventListener('input', () => {
+        if (newPasswordInput.classList.contains('is-invalid')) {
+            newPasswordInput.classList.remove('is-invalid');
+          
+            if (confirmPasswordInput.classList.contains('is-invalid') && newPasswordInput.value === confirmPasswordInput.value) {
+                 confirmPasswordInput.classList.remove('is-invalid');
+            }
+             newPasswordErrorDiv.classList.add('d-none');
+             newPasswordErrorDiv.textContent = '';
+        }
+    });
+    confirmPasswordInput.addEventListener('input', () => {
+        if (confirmPasswordInput.classList.contains('is-invalid')) {
+            confirmPasswordInput.classList.remove('is-invalid');
+            
+             if (newPasswordInput.classList.contains('is-invalid') && newPasswordInput.value === confirmPasswordInput.value) {
+                 newPasswordInput.classList.remove('is-invalid');
+            }
+            newPasswordErrorDiv.classList.add('d-none');
+            newPasswordErrorDiv.textContent = '';
+        }
+    });
+
+    
+    modalElement.addEventListener('hidden.bs.modal', () => {
+        verifyStepDiv.style.display = 'block';
+        newPasswordStepDiv.style.display = 'none';
+        successMessageDiv.classList.add('d-none');
+        modalFooter.classList.add('d-none');
+        modalTitle.textContent = 'Verificar Contraseña Actual';
+        verifyForm.reset();
+        newPasswordForm.reset();
+        verifyErrorDiv.textContent = '';
+        newPasswordErrorDiv.classList.add('d-none');
+        newPasswordErrorDiv.textContent = '';
+        currentPasswordInput.classList.remove('is-invalid');
+        newPasswordInput.classList.remove('is-invalid');
+        confirmPasswordInput.classList.remove('is-invalid');
+        verifyPasswordBtn.disabled = false;
+        verifyPasswordBtn.innerHTML = 'Verificar';
+        savePasswordBtn.disabled = false;
+        savePasswordBtn.innerHTML = 'Guardar Nueva Contraseña';
+        
+         modalElement.removeAttribute('data-bs-backdrop');
+         modalElement.removeAttribute('data-bs-keyboard');
+         closeButton.style.display = 'block';
+    });
 
 }
 
@@ -749,6 +1057,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.currentUserData) {
         createPostModal();
         createSettingsModal();
+        createChangePasswordModal();
     } else {
         console.warn("currentUserData no está definido. Algunos modales no se inicializarán con datos de usuario.");
     }

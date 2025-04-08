@@ -83,6 +83,22 @@
                  http_response_code(405); echo "Método no permitido para actualizar perfil. Se requiere POST."; exit();
             }
         }
+
+        elseif ($clean_uri_profile === $base_path . 'profile/verify-password') {
+            if ($request_method === 'POST') {
+                $userController->verifyCurrentPassword();
+            } else {
+                 http_response_code(405); echo "Método no permitido para verificar contraseña. Se requiere POST."; exit();
+            }
+        }
+        
+        elseif ($clean_uri_profile === $base_path . 'profile/update-password') {
+            if ($request_method === 'POST') {
+                $userController->updatePassword();
+            } else {
+                 http_response_code(405); echo "Método no permitido para actualizar contraseña. Se requiere POST."; exit();
+            }
+        }
         
         elseif ($clean_uri_profile === $base_path . 'profile') {
             if ($request_method === 'GET') {

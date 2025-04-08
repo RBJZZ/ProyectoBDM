@@ -282,6 +282,85 @@ class User{
         }
     }
 
+    public function actualizarContrasena(int $userId, string $newPasswordHash): bool
+    {
+        $action_code = 'P'; 
+        $nullVar = null; 
+
+        if (empty($userId) || empty($newPasswordHash)) {
+            error_log("actualizarContrasena: userId o newPasswordHash vacío.");
+            return false;
+        }
+
+        $stmt = null;
+        try {
+             error_log("actualizarContrasena (ID: $userId): Preparando SP 'sp_user_manager' con acción 'P'...");
+             $stmt = $this->connection->prepare("CALL sp_user_manager(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+             if (!$stmt) {
+                 error_log("actualizarContrasena (ID: $userId): Error al preparar SP: (" . $this->connection->errno . ") " . $this->connection->error);
+                 return false;
+             }
+             error_log("actualizarContrasena (ID: $userId): SP preparado correctamente.");
+
+             error_log("actualizarContrasena (ID: $userId): Haciendo bind_param para acción 'P'...");
+             
+             $bindSuccess = $stmt->bind_param(
+                 "sisssssssssssssbsbss",
+                 $action_code,       
+                 $userId,            
+                 $nullVar,           
+                 $nullVar,           
+                 $nullVar,           
+                 $nullVar,           
+                 $nullVar,           
+                 $newPasswordHash,   
+                 $nullVar,           
+                 $nullVar,           
+                 $nullVar,           
+                 $nullVar,           
+                 $nullVar,           
+                 $nullVar,           
+                 $nullVar,           
+                 $nullVar,           
+                 $nullVar,           
+                 $nullVar,           
+                 $nullVar,           
+                 $nullVar            
+             );
+
+            if (!$bindSuccess) {
+                 error_log("actualizarContrasena (ID: $userId): Error al hacer bind_param: (" . $stmt->errno . ") " . $stmt->error);
+                 $stmt->close();
+                 return false;
+            }
+             error_log("actualizarContrasena (ID: $userId): bind_param exitoso.");
+
+            error_log("actualizarContrasena (ID: $userId): Ejecutando SP...");
+            $success = $stmt->execute();
+
+            if (!$success) {
+                 error_log("actualizarContrasena (ID: $userId): Error al ejecutar SP: (" . $stmt->errno . ") " . $stmt->error);
+            } else {
+                 error_log("actualizarContrasena (ID: $userId): Ejecución de SP exitosa. Filas afectadas: " . $stmt->affected_rows);
+                 
+            }
+
+            return $success;
+
+        } catch (mysqli_sql_exception $e) {
+             error_log("Excepción BBDD (mysqli_sql_exception) en actualizarContrasena (ID: $userId): " . $e->getMessage() . " (Código: " . $e->getCode() . ")");
+             return false;
+        } catch (Exception $e) {
+             error_log("Excepción GENERAL en actualizarContrasena (ID: $userId): " . $e->getMessage());
+             return false;
+        } finally {
+             if (isset($stmt) && $stmt instanceof mysqli_stmt) {
+                $stmt->close();
+                error_log("actualizarContrasena (ID: $userId): Statement cerrado.");
+            }
+        }
+    }
+
     public function obtenerPerfilUsuario(int $userId): ?array
     {
         $action_code = 'G';

@@ -62,7 +62,7 @@
                         <div class="invalid-feedback">Ingresa un correo válido</div>
                     </div>
 
-                    <div class="mb-2">
+                    <div class="mb-3">
                        
                         <input type="password" name="contrasena" class="form-control" placeholder="Contraseña" required minlength="6">
                         <div class="invalid-feedback">Mínimo 6 caracteres</div> 
@@ -101,7 +101,94 @@
                     </form>
         </div>
     </div>
+    <script src="<?php echo htmlspecialchars($base_path); ?>Views/js/validation.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const registerForm = document.querySelector('form[action="<?php echo htmlspecialchars($base_path); ?>registro"]');
+            if (!registerForm) return;
 
+           
+            const nombreInput = registerForm.elements['nombre'];
+            const apellidoPInput = registerForm.elements['apellidoPaterno'];
+            const apellidoMInput = registerForm.elements['apellidoMaterno'];
+            const usernameInput = registerForm.elements['username'];
+            const emailInput = registerForm.elements['email'];
+            const passwordInput = registerForm.elements['contrasena'];
+            const confirmPasswordInput = registerForm.elements['confirmar_contrasena'];
+            const fechaNacInput = registerForm.elements['fechaNacimiento']; 
+            const generoSelect = registerForm.elements['genero'];
+
+         
+            const fieldsToValidate = {
+                'nombre': [validateName],
+                'apellidoPaterno': [validateName],
+                'apellidoMaterno': [validateName], 
+                'username': [validateUsername],
+                'email': [validateEmail],
+                'contrasena': [validatePasswordLength, 6], 
+                'confirmar_contrasena': [validatePasswordMatch, passwordInput],
+                'fechaNacimiento': [validateDate, 18], 
+                'genero': [validateSelection]
+            };
+
+            
+            Object.keys(fieldsToValidate).forEach(name => {
+                const inputElement = registerForm.elements[name];
+                if (inputElement) {
+                    const [validationFn, ...args] = fieldsToValidate[name];
+                    
+                    const eventType = (inputElement.type === 'checkbox' || inputElement.type === 'radio' || inputElement.tagName === 'SELECT') ? 'change' : 'blur';
+
+                    inputElement.addEventListener(eventType, () => {
+                         if (name === 'confirmar_contrasena') {
+                             validatePasswordMatch(passwordInput, inputElement);
+                         } else if (name === 'contrasena') {
+                             
+                             validatePasswordLength(inputElement, ...args);
+                             if (confirmPasswordInput.value) {
+                                 validatePasswordMatch(inputElement, confirmPasswordInput);
+                             }
+                         }
+                         else {
+                             validationFn(inputElement, ...args);
+                         }
+                    });
+
+                    
+                    if (!inputElement.required && inputElement.value === '') {
+                         inputElement.classList.remove('is-invalid', 'is-valid');
+                    }
+                }
+            });
+
+             
+             if (confirmPasswordInput) {
+                 confirmPasswordInput.addEventListener('blur', () => {
+                      validatePasswordMatch(passwordInput, confirmPasswordInput);
+                 });
+             }
+
+
+            
+            registerForm.addEventListener('submit', (event) => {
+               
+                event.preventDefault();
+
+                
+                const isFormValid = validateForm(registerForm, fieldsToValidate);
+
+                if (isFormValid) {
+                    console.log('Formulario de registro válido, enviando...');
+                    
+                    registerForm.submit();
+                } else {
+                    console.log('Formulario de registro inválido.');
+                   
+                }
+            });
+        });
+    </script>
     <script src="<?php echo htmlspecialchars($base_path); ?>Views/js/register.js"></script>
+    
 </body>
 </html>
