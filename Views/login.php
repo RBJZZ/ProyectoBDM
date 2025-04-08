@@ -27,6 +27,17 @@
 
     <div class="login-container">
         <div class="brand-text">StarNest</div>
+
+        <?php if (isset($register_success) && $register_success): ?>
+            <div class="alert alert-success" role="alert">
+                <?php echo htmlspecialchars($register_success); ?>
+            </div>
+        <?php endif; ?>
+        <?php if (isset($login_error) && $login_error): ?>
+            <div class="alert alert-danger" role="alert">
+                <?php echo htmlspecialchars($login_error); ?>
+            </div>
+        <?php endif; ?>
         
         <form method="POST" action="<?php echo htmlspecialchars($base_path); ?>login">
             <div class="mb-3">

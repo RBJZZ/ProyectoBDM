@@ -1,3 +1,49 @@
+<?php
+
+if (session_status() == PHP_SESSION_NONE) { session_start(); }
+if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+    $base_path_local = '/ProyectoBDM/';
+    header('Location: ' . $base_path_local . 'login');
+    exit();
+}
+
+
+$username = $userData['usr_username'] ?? 'Usuario';
+$nombreCompleto = ($userData['usr_nombre'] ?? '') . ' ' . ($userData['usr_apellido_paterno'] ?? '');
+$nombre= $userData['usr_nombre'] ?? 'Nombre';
+$profilePicData = $userData['usr_foto_perfil'] ?? null;
+$profilePicMime = $userData['usr_foto_perfil_mime'] ?? null; 
+$coverPicData = $userData['usr_foto_portada'] ?? null;
+$coverPicMime = $userData['usr_foto_portada_mime'] ?? null;
+$userId = $userData['usr_id'] ?? null;
+$biografia = $userData['usr_biografia'] ?? 'Sin biografía';
+
+// variables de ruta de imagen
+$profilePicSrc = null;
+$coverPicSrc = null;
+
+$profilePicSrc = null;
+if ($profilePicData && $profilePicMime) {
+    $profilePicSrc = 'data:' . htmlspecialchars($profilePicMime) . ';base64,' . base64_encode($profilePicData);
+} else {
+  
+    $profilePicSrc = htmlspecialchars($base_path) . 'Views/pictures/defaultpfp.jpg';
+}
+
+$coverPicSrc = null;
+if ($coverPicData && $coverPicMime) {
+    $coverPicSrc = 'data:' . htmlspecialchars($coverPicMime) . ';base64,' . base64_encode($coverPicData);
+} else {
+     
+    $coverPicSrc = htmlspecialchars($base_path) . 'Views/pictures/defaultcover.jpg';
+}
+
+
+
+?>
+
+
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -11,6 +57,7 @@
     
 </head>
 <body>
+
     
    <div id="navbar-container">
 
@@ -24,17 +71,17 @@
                 <div class="card mb-3 rounded-4">
                   
                     <div class="profile-cover-container" style="height: 150px; position: relative;">
-                        <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/header.jpg" class="profile-cover" 
+                        <img src="<?php echo htmlspecialchars($coverPicSrc);?>" class="profile-cover" 
                              style="width: 100%; height: 100%; object-fit: cover;">
                      
-                        <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/pic.jpg" 
+                        <img src="<?php echo htmlspecialchars($profilePicSrc);?>" 
                              class="profile-img position-absolute top-100 start-50 translate-middle"
-                             style="width: 90px; height: 90px; border: 3px solid white;">
+                             style="width: 120px; height: 120px; border: 3px solid white;">
                     </div>
             
                     <div class="card-body text-center pt-5">
-                        <h5 class="mb-0 mt-3 pt-1">Anya Forger</h5>
-                        <small class="text-muted">@forgeranya</small>
+                        <h5 class="mb-0 mt-3 pt-1"><?php echo htmlspecialchars($nombreCompleto);?></h5>
+                        <small class="text-muted">@<?php echo htmlspecialchars($username);?></small>
                         
                         <div class="stats-container mt-3">
                             <div class="stat-item">
@@ -83,7 +130,7 @@
                 <div class="card mb-3">
                     <div class="card-body">
                         <div class="d-flex align-items-center mb-3">
-                            <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/pic.jpg" class="rounded-circle" width="45" height="45" alt="Perfil">
+                            <img src="<?php echo htmlspecialchars($profilePicSrc); ?>" class="rounded-circle" width="45" height="45" alt="Perfil">
                             <input type="text" class="form-control ms-3 rounded-pill feed-input" placeholder="¿Qué estás pensando?" readonly>
                         </div>
                         <div class="row align-items-center">
@@ -256,7 +303,7 @@
 
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <div class="d-flex align-items-center">
-                                    <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/meme icon.jpg" class="active-friend-img">
+                                    <img src="<?php echo htmlspecialchars($base_path);?>views/pictures/meme icon.jpg" class="active-friend-img">
                                     <div>
                                         <div class="fw-bold">Irisbane</div>
                                         <small class="text-muted">25 amigos en común</small>
@@ -267,7 +314,7 @@
 
                             <div class="d-flex align-items-center justify-content-between mb-3">
                                 <div class="d-flex align-items-center">
-                                    <img src="<?php echo htmlspecialchars($base_path); ?>views/pictures/meme icon.jpg" class="active-friend-img">
+                                    <img src="<?php echo htmlspecialchars($base_path);?>views/pictures/meme icon.jpg" class="active-friend-img">
                                     <div>
                                         <div class="fw-bold">Irisbane</div>
                                         <small class="text-muted">25 amigos en común</small>
@@ -290,7 +337,26 @@
     </div>
 
 
-
+    <script>
+        console.log("Definiendo currentUserData...");
+        window.currentUserData = {
+            userId: <?php echo json_encode($userId); ?>,
+            username: <?php echo json_encode($username); ?>,
+            nombreCompleto: <?php echo json_encode($nombreCompleto); ?>,
+            nombre: <?php echo json_encode($nombre); ?>,
+           
+            apellidoPaterno: <?php echo json_encode($userData['usr_apellido_paterno'] ?? ''); ?>,
+            apellidoMaterno: <?php echo json_encode($userData['usr_apellido_materno'] ?? ''); ?>,
+            biografia: <?php echo json_encode($biografia); ?>,
+            profilePicSrc: <?php echo json_encode($profilePicSrc); ?>,
+            coverPicSrc: <?php echo json_encode($coverPicSrc); ?>,
+            privacidad: <?php echo json_encode($userData['usr_privacidad'] ?? 'Publico'); ?> 
+        };
+        window.basePath = <?php echo json_encode($base_path); ?>;
+        console.log("currentUserData definido:", window.currentUserData); 
+    </script>
+    
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="<?php echo htmlspecialchars($base_path); ?>Views/js/modal.js"></script>
     <script src="<?php echo htmlspecialchars($base_path); ?>Views/js/main.js"></script>

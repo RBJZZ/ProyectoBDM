@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", function() {
         <nav class="navbar navbar-expand-lg nav-custom fixed-top bg-custom">
             <div class="container-fluid">
                
-                <a class="navbar-brand logo fw-bold ms-2" href="./feed.html"><span><i class="bi bi-stars"></i></span> StarNest</a>
+                <a class="navbar-brand logo fw-bold ms-2" href="/ProyectoBDM/feed"><span><i class="bi bi-stars"></i></span> StarNest</a>
                 
                 <div class="d-flex flex-grow-1 mx-4">
                     <div class="input-group w-100">
@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", function() {
                             <i class="bi bi-people fs-5"></i>
                         </a>
                         
-                        <a href="./userprofile.html" class="text-dark mx-3" title="Perfil">
+                        <a href="/ProyectoBDM/profile" class="text-dark mx-3" title="Perfil">
                             <i class="bi bi-person-circle fs-5"></i>
                         </a>
                         

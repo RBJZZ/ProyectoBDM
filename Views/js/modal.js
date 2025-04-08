@@ -79,15 +79,20 @@ function createNotificationsModal() {
 ////////////// VENTANA MODAL "PUBLICAR"
 
 function createPostModal() {
+
+    const profilePic = window.currentUserData?.profilePicSrc || (window.basePath + 'Views/pictures/defaultpfp.jpg'); 
+    const userFullName = window.currentUserData?.nombreCompleto || 'Usuario';
+    const userFirstName = window.currentUserData?.nombre || 'Usuario';
+
     const modalHTML = `
     <div class="modal fade" id="postModal" tabindex="-1" aria-labelledby="postModalLabel">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header border-0 pb-0">
                     <div class="d-flex align-items-center w-100">
-                        <img src="./pictures/pic.jpg" class="rounded-circle me-2" width="45" height="45">
+                        <img src="${profilePic}" class="rounded-circle me-2" width="45" height="45">
                         <div class="flex-grow-1">
-                            <h6 class="mb-0 fw-bold">Anya Forger</h6>
+                            <h6 class="mb-0 fw-bold">${userFullName}</h6>
                             <select class="form-select form-select-sm border-0 p-0" style="width: auto;">
                                 <option>Público</option>
                                 <option>Privado</option>
@@ -100,7 +105,7 @@ function createPostModal() {
                 
                 <div class="modal-body p-5 pb-2">
                     <textarea class="form-control border-0 fs-5" 
-                              placeholder="¿Qué estás pensando, Anya?" 
+                              placeholder="¿Qué estás pensando, ${userFirstName}?" 
                               rows="5"
                               style="resize: none;"></textarea>
                     
@@ -139,70 +144,141 @@ function createPostModal() {
 ///////////// VENTANA MODAL "AJUSTES"
 
 function createSettingsModal() {
+
+    const profilePic = window.currentUserData?.profilePicSrc || '';
+    const coverPic = window.currentUserData?.coverPicSrc || '';
+    const userNombre = window.currentUserData?.nombre || '';
+    const userApellidoP = window.currentUserData?.apellidoPaterno || '';
+    const userApellidoM = window.currentUserData?.apellidoMaterno || '';
+    const userBio = window.currentUserData?.biografia || '';
+    const userTelefono = window.currentUserData?.telefono || '';
+    const userGenero = window.currentUserData?.genero || '';
+    const savedPais = window.currentUserData?.pais || '';
+    const savedProvincia = window.currentUserData?.provincia || ''; 
+    const savedCiudad = window.currentUserData?.ciudad || '';
+    const userPrivacidad = window.currentUserData?.privacidad || 'Publico';
+    const userFechaNac = window.currentUserData?.fechaNacimiento || '';
+
     const modalHTML = `
     <div class="modal fade" id="settingsModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Configuración de perfil</h5>
+                    <h5 class="modal-title">Editar Perfil</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <form id="profileSettingsForm">
-                        <!-- Sección Header -->
+                <div class="modal-body m-4">
+                    
+                    <form id="profileSettingsForm" enctype="multipart/form-data">
+                    
                         <div class="mb-4">
                             <label class="form-label">Foto de portada</label>
                             <div class="cover-preview-container mb-3">
-                                <img id="coverPreview" class="cover-preview">
-                                <input type="file" id="coverInput" accept="image/*" hidden>
+                                <img id="coverPreview" class="cover-preview" src="${coverPic}">
+                               
+                                <input type="file" id="coverInput" name="foto_portada" accept="image/*" hidden>
                                 <button type="button" class="btn btn-upload-cover btn-custom border" onclick="document.getElementById('coverInput').click()">
                                     <i class="bi bi-camera"></i> Cambiar portada
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Sección Avatar -->
+                        
                         <div class="mb-4">
                             <label class="form-label">Foto de perfil</label>
                             <div class="avatar-preview-container mb-3">
-                                <img id="avatarPreview" class="avatar-preview rounded-circle">
-                                <input type="file" id="avatarInput" accept="image/*" hidden>
+                                <img id="avatarPreview" class="avatar-preview rounded-circle" src="${profilePic}">
+                                 <!-- Input de archivo para perfil -->
+                                <input type="file" id="avatarInput" name="foto_perfil" accept="image/*" hidden>
                                 <button type="button" class="btn btn-upload-avatar btn-custom" onclick="document.getElementById('avatarInput').click()">
                                     <i class="bi bi-camera"></i>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Campos de nombre divididos -->
                         <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Nombres</label>
-                                <input type="text" class="form-control" id="firstName" required>
+                            <div class="col-md-4">
+                                <label for="editNombre" class="form-label">Nombre(s)</label>
+                                <!-- Usar nombre y value, añadir name -->
+                                <input type="text" class="form-control" id="editNombre" name="nombre" value="${userNombre}" required>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Apellidos</label>
-                                <input type="text" class="form-control" id="lastName" required>
+                            <div class="col-md-4">
+                                <label for="editApellidoP" class="form-label">Apellido Paterno</label>
+                                <!-- Usar nombre y value, añadir name -->
+                                <input type="text" class="form-control" id="editApellidoP" name="apellidoPaterno" value="${userApellidoP}" required>
+                            </div>
+                             <div class="col-md-4">
+                                <label for="editApellidoM" class="form-label">Apellido Materno</label>
+                                 <!-- Usar nombre y value, añadir name -->
+                                <input type="text" class="form-control" id="editApellidoM" name="apellidoMaterno" value="${userApellidoM}">
                             </div>
                         </div>
 
-                        <!-- Campo de biografía -->
-                        <div class="mb-3">
-                            <label class="form-label">Biografía</label>
-                            <textarea class="form-control" id="profileBio" rows="3" 
-                                placeholder="Cuéntanos algo sobre ti..."></textarea>
+                         <div class="mb-3">
+                            <label for="editFechaNac" class="form-label">Fecha de Nacimiento</label>
+                            <input type="date" class="form-control" id="editFechaNac" name="fechaNacimiento" value="${userFechaNac}">
                         </div>
 
-                        <!-- Selector de privacidad -->
-                        <div class="mb-4">
-                            <label class="form-label">Privacidad del perfil</label>
-                            <select class="form-select" id="profilePrivacy">
-                                <option value="public">Público</option>
-                                <option value="private">Privado</option>
-                                <option value="friends">Solo amigos</option>
-                                <option value="custom">Personalizado</option>
+                         
+                         <div class="mb-3">
+                            <label for="editGenero" class="form-label">Género</label>
+                            <select class="form-select" id="editGenero" name="genero">
+                                <option value="" ${userGenero === '' ? 'selected' : ''}>Selecciona...</option>
+                                <option value="Masculino" ${userGenero === 'Masculino' ? 'selected' : ''}>Masculino</option>
+                                <option value="Femenino" ${userGenero === 'Femenino' ? 'selected' : ''}>Femenino</option>
+                                <option value="Otro" ${userGenero === 'Otro' ? 'selected' : ''}>Otro</option>
+                                <option value="Prefiero no decirlo" ${userGenero === 'Prefiero no decirlo' ? 'selected' : ''}>Prefiero no decirlo</option>
                             </select>
                         </div>
 
+                        <div class="mb-3">
+                            <label for="editBio" class="form-label">Biografía</label>
+                            
+                            <textarea class="form-control" id="editBio" name="biografia" rows="3"
+                                placeholder="Cuéntanos algo sobre ti...">${userBio}</textarea>
+                        </div>
+
+                         
+                         <div class="mb-3">
+                            <label for="editTelefono" class="form-label">Teléfono</label>
+                            <input type="tel" class="form-control" id="editTelefono" name="telefono" value="${userTelefono}" placeholder="Ingresa un número de teléfono">
+                        </div>
+
+                       
+                          <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="editPais" class="form-label">País:</label>
+                                <select class="form-select" id="editPais" name="pais" required>
+                                    <option value="">Cargando países...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="editProvincia" class="form-label">Estado/Provincia:</label>
+                                <select class="form-select" id="editProvincia" name="provincia" disabled required>
+                                     <!-- El name aquí debe coincidir con tu BD/Modelo -->
+                                    <option value="">Selecciona un país primero</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="editCiudad" class="form-label">Ciudad:</label>
+                                <select class="form-select" id="editCiudad" name="ciudad" disabled required>
+                                    <option value="">Selecciona un estado primero</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="editPrivacy" class="form-label">Privacidad del perfil</label>
+                             <!-- Usar nombre, preseleccionar opción correcta -->
+                            <select class="form-select" id="editPrivacy" name="privacidad">
+                                <option value="Publico" ${userPrivacidad === 'Publico' ? 'selected' : ''}>Público</option>
+                                <option value="Privado" ${userPrivacidad === 'Privado' ? 'selected' : ''}>Privado</option>
+                                <option value="Solo Amigos" ${userPrivacidad === 'Solo Amigos' ? 'selected' : ''}>Solo Amigos</option>
+                                <!-- Eliminado 'custom' si no lo manejas -->
+                            </select>
+                        </div>
+
+                        <!-- Botón Guardar -->
                         <button type="submit" class="btn btn-custom w-100">Guardar cambios</button>
                     </form>
                 </div>
@@ -212,14 +288,273 @@ function createSettingsModal() {
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
 
-    // Manejar cambio de imágenes
-    document.getElementById('coverInput').addEventListener('change', function(e) {
-        handleImageUpload(e.target.files[0], 'coverPreview');
-    });
+    const modalElement = document.getElementById('settingsModal'); 
+    const coverInput = modalElement.querySelector('#coverInput');
+    const avatarInput = modalElement.querySelector('#avatarInput');
+    const selectPais = modalElement.querySelector('#editPais');
+    const selectEstado = modalElement.querySelector('#editProvincia');
+    const selectCiudad = modalElement.querySelector('#editCiudad');
+    const settingsForm = modalElement.querySelector('#profileSettingsForm'); 
 
-    document.getElementById('avatarInput').addEventListener('change', function(e) {
-        handleImageUpload(e.target.files[0], 'avatarPreview');
-    });
+    if (coverInput) {
+        coverInput.addEventListener('change', function(e) {
+            handleImageUpload(e.target.files[0], 'coverPreview');
+        });
+    } else { console.error("Elemento #coverInput no encontrado en modal settings"); }
+
+    if (avatarInput) {
+        avatarInput.addEventListener('change', function(e) {
+            handleImageUpload(e.target.files[0], 'avatarPreview');
+        });
+    } else { console.error("Elemento #avatarInput no encontrado en modal settings"); }
+
+
+    async function cargarPaises() {
+        selectPais.disabled = true; 
+        selectEstado.innerHTML = '<option value="">Selecciona un país primero</option>';
+        selectCiudad.innerHTML = '<option value="">Selecciona un estado primero</option>';
+        selectEstado.disabled = true;
+        selectCiudad.disabled = true;
+  
+        try {
+            const res = await fetch('https://countriesnow.space/api/v0.1/countries/states');
+            if (!res.ok) throw new Error('Error al cargar países');
+            const data = await res.json();
+  
+           
+            if (!data || data.error || !Array.isArray(data.data)) {
+                console.error("Respuesta inesperada de la API de países:", data);
+                selectPais.innerHTML = '<option value="">Error al cargar</option>';
+                return;
+            }
+            const paises = data.data;
+  
+            selectPais.innerHTML = '<option value="">Selecciona un país</option>'; 
+            let paisEncontrado = false;
+            paises.forEach(pais => {
+                const option = document.createElement('option');
+                option.value = pais.name;
+                option.textContent = pais.name;
+                
+                if (pais.name === savedPais) {
+                    option.selected = true;
+                    paisEncontrado = true;
+                }
+                selectPais.appendChild(option);
+            });
+            selectPais.disabled = false; 
+  
+            
+            if (paisEncontrado) {
+                await cargarEstados(savedPais); 
+            }
+  
+        } catch(error) {
+             console.error("Error en cargarPaises:", error);
+             selectPais.innerHTML = '<option value="">Error al cargar</option>';
+        }
+      }
+  
+      async function cargarEstados(paisSeleccionado) {
+        selectEstado.innerHTML = '<option value="">Cargando estados...</option>';
+        selectCiudad.innerHTML = '<option value="">Selecciona un estado primero</option>';
+        selectEstado.disabled = true;
+        selectCiudad.disabled = true;
+  
+        try {
+            const res = await fetch('https://countriesnow.space/api/v0.1/countries/states', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ country: paisSeleccionado })
+            });
+            if (!res.ok) throw new Error('Error al cargar estados');
+            const data = await res.json();
+  
+            
+            if (!data || data.error || !data.data || !Array.isArray(data.data.states)) {
+                console.error("Respuesta inesperada de la API de estados:", data);
+                selectEstado.innerHTML = '<option value="">No disponible</option>';
+                return; 
+            }
+            const estados = data.data.states;
+  
+            if (estados.length === 0) {
+                selectEstado.innerHTML = '<option value="">No hay estados</option>';
+                return; 
+            }
+  
+            selectEstado.innerHTML = '<option value="">Selecciona un estado</option>'; 
+            let estadoEncontrado = false;
+            estados.forEach(estado => {
+                const option = document.createElement('option');
+                option.value = estado.name;
+                option.textContent = estado.name;
+                
+                if (paisSeleccionado === savedPais && estado.name === savedProvincia) {
+                    option.selected = true;
+                    estadoEncontrado = true;
+                }
+                selectEstado.appendChild(option);
+            });
+            selectEstado.disabled = false; 
+  
+            if (estadoEncontrado) {
+                await cargarCiudades(paisSeleccionado, savedProvincia);
+            }
+  
+         } catch(error) {
+             console.error("Error en cargarEstados:", error);
+             selectEstado.innerHTML = '<option value="">Error al cargar</option>';
+         }
+      }
+  
+      async function cargarCiudades(paisSeleccionado, estadoSeleccionado) {
+        selectCiudad.innerHTML = '<option value="">Cargando ciudades...</option>';
+        selectCiudad.disabled = true;
+  
+        try {
+            const res = await fetch('https://countriesnow.space/api/v0.1/countries/state/cities', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ country: paisSeleccionado, state: estadoSeleccionado })
+            });
+             if (!res.ok) throw new Error('Error al cargar ciudades');
+            const data = await res.json();
+  
+            if (!data || data.error || !Array.isArray(data.data)) {
+                console.error("Respuesta inesperada de la API de ciudades:", data);
+                selectCiudad.innerHTML = '<option value="">No disponible</option>';
+                return;
+            }
+            const ciudades = data.data;
+  
+            if (ciudades.length === 0) {
+                 selectCiudad.innerHTML = '<option value="">No hay ciudades</option>';
+                 return;
+            }
+  
+            selectCiudad.innerHTML = '<option value="">Selecciona una ciudad</option>'; 
+            ciudades.forEach(ciudad => {
+                const option = document.createElement('option');
+                option.value = ciudad;
+                option.textContent = ciudad;
+                if (paisSeleccionado === savedPais && estadoSeleccionado === savedProvincia && ciudad === savedCiudad) {
+                    option.selected = true;
+                }
+                selectCiudad.appendChild(option);
+            });
+            selectCiudad.disabled = false; 
+  
+        } catch(error) {
+            console.error("Error en cargarCiudades:", error);
+            selectCiudad.innerHTML = '<option value="">Error al cargar</option>';
+        }
+      }
+  
+      
+      selectPais.addEventListener('change', () => {
+        const pais = selectPais.value;
+        if (pais) {
+          cargarEstados(pais); 
+        } else {
+         
+          selectEstado.innerHTML = '<option value="">Selecciona un país primero</option>';
+          selectCiudad.innerHTML = '<option value="">Selecciona un estado primero</option>';
+          selectEstado.disabled = true;
+          selectCiudad.disabled = true;
+        }
+      });
+  
+      selectEstado.addEventListener('change', () => {
+        const pais = selectPais.value; 
+        const estado = selectEstado.value;
+        if (estado) {
+          cargarCiudades(pais, estado); 
+        } else {
+          
+          selectCiudad.innerHTML = '<option value="">Selecciona un estado primero</option>';
+          selectCiudad.disabled = true;
+        }
+      });
+  
+      
+      cargarPaises(); 
+  
+    
+
+      if (settingsForm) {
+        console.log("Formulario #profileSettingsForm encontrado en createSettingsModal. Añadiendo listener 'submit'...");
+        settingsForm.addEventListener('submit', (e) => {
+            console.log('Evento submit del formulario CAPTURADO.');
+            e.preventDefault();
+            console.log('Default Prevented EJECUTADO.');
+
+            const formData = new FormData(settingsForm);
+            console.log("FormData creada:");
+             for (let [key, value] of formData.entries()) {
+                 if (value instanceof File) {
+                     console.log(`FormData Entry: ${key}: File Name: ${value.name}, Size: ${value.size}, Type: ${value.type}`);
+                 } else {
+                     console.log(`FormData Entry: ${key}:`, value);
+                 }
+             }
+
+            const saveButton = settingsForm.querySelector('button[type="submit"]');
+            const originalButtonText = saveButton ? saveButton.innerHTML : 'Guardar cambios'; 
+
+            if(saveButton) {
+                saveButton.disabled = true;
+                saveButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+            }
+
+            fetch(window.basePath + 'profile/update', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => { 
+                 console.log("Respuesta Fetch recibida, Status:", response.status);
+                 if (!response.ok) {
+                      return response.text().then(text => {
+                          console.error("Respuesta Fetch NO OK, Texto:", text);
+                          try {
+                              const errData = JSON.parse(text);
+                              throw new Error(errData.message || `Error HTTP ${response.status}`);
+                          } catch (jsonError) {
+                              throw new Error(text || `Error HTTP ${response.status}`);
+                          }
+                      });
+                 }
+                 console.log("Respuesta Fetch OK, intentando parsear JSON...");
+                 return response.json();
+             })
+            .then(data => { 
+                 console.log("Respuesta JSON procesada:", data);
+                 if (data.success) {
+                     alert('Perfil actualizado con éxito!');
+                     window.location.reload(); 
+                 } else {
+                     console.error('Error reportado por el servidor:', data.message);
+                     alert('Error al actualizar: ' + (data.message || 'Error desconocido'));
+                 }
+             })
+            .catch(error => { 
+                 console.error('Error en la solicitud FETCH o procesamiento:', error);
+                 alert('Error de conexión o procesamiento: ' + error.message);
+             })
+            .finally(() => { 
+                 console.log("Ejecutando Finally del Fetch");
+                 if (saveButton) { 
+                     saveButton.disabled = false;
+                     saveButton.innerHTML = originalButtonText;
+                 }
+            });
+        });
+    } else {
+        console.error("¡CRÍTICO! No se encontró #profileSettingsForm después de insertar el HTML del modal.");
+    }
+
+      
+
 }
 
 function handleImageUpload(file, previewId) {
@@ -410,9 +745,15 @@ function showInsightsModal() {
 
 //CARGA DE DOM
 document.addEventListener('DOMContentLoaded', function() {
-    createNotificationsModal();
-    createPostModal();
-    createSettingsModal();
+
+    if (window.currentUserData) {
+        createPostModal();
+        createSettingsModal();
+    } else {
+        console.warn("currentUserData no está definido. Algunos modales no se inicializarán con datos de usuario.");
+    }
+    
+    createNotificationsModal()
     
     const settingsButton = document.getElementById('settingsButton');
     const settingsModal = new bootstrap.Modal(document.getElementById('settingsModal'));
@@ -427,6 +768,7 @@ document.addEventListener('DOMContentLoaded', function() {
         settingsModal.show();
     });
 
+    /*
     document.getElementById('profileSettingsForm').addEventListener('submit', (e) => {
         e.preventDefault();
         
@@ -438,7 +780,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         settingsModal.hide();
     });
-    
+    */
+
     const notificationTrigger = document.querySelector('[title="Notificaciones"]');
     if(notificationTrigger) {
         notificationTrigger.setAttribute('data-bs-toggle', 'modal');
