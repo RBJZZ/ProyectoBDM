@@ -272,3 +272,64 @@ padding-right: 5px;
 .dark-theme .btn-custom {
     background-color: var(--night-primary) !important;
 }
+
+/* PREVIEWS VENTANAS MODALES */
+.preview-area {
+    min-height: 100px; /* Asegura espacio incluso si no hay previews */
+    background-color: var(--bs-secondary-bg); /* Un fondo ligero */
+    border-radius: 0.375rem; /* Bootstrap default border radius */
+    padding: 0.5rem; /* Espaciado interno */
+    border: 1px dashed var(--bs-border-color); /* Borde punteado */
+}
+
+.preview-item {
+    /* Ya usamos flex-wrap y gap en el contenedor,
+       así que solo necesitamos estilos para el item individual si es necesario */
+    background-color: var(--bs-tertiary-bg);
+}
+
+.preview-item img,
+.preview-item video {
+    display: block; /* Evita espacio extra debajo */
+    max-width: 100%; /* Asegura que no se desborde */
+}
+
+.preview-error {
+    word-break: break-word; /* Evita que textos largos rompan el layout */
+}
+
+/* Ajustes para el botón de eliminar */
+.preview-item .btn-close {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background-color: rgba(255, 0, 0, 0.7); /* Fondo rojo semitransparente */
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: none;
+    color: white;
+    font-size: 12px;
+    line-height: 16px; /* Ajustar para centrar la 'x' */
+    text-align: center;
+    cursor: pointer;
+    opacity: 0.8;
+}
+.preview-item .btn-close:hover {
+    opacity: 1;
+    background-color: rgba(220, 53, 69, 1); /* Rojo más opaco de Bootstrap */
+}
+
+
+
+.preview-item.video-preview-item {
+    /* Puedes añadir estilos específicos para los contenedores de video si lo necesitas */
+    background-color: #222; /* Fondo oscuro para videos */
+}
+
+
+.preview-item video::-webkit-media-controls-panel {
+  /* Ejemplo para Chrome/Safari - ¡úsalo con precaución! */
+   background-color: rgba(0, 0, 0, 0.5); 
+}

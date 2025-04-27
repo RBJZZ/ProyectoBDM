@@ -83,62 +83,346 @@ function createPostModal() {
     const profilePic = window.currentUserData?.profilePicSrc || (window.basePath + 'Views/pictures/defaultpfp.jpg'); 
     const userFullName = window.currentUserData?.nombreCompleto || 'Usuario';
     const userFirstName = window.currentUserData?.nombre || 'Usuario';
+    const defaultPrivacy = window.currentUserData?.privacidad || 'Publico';
 
     const modalHTML = `
     <div class="modal fade" id="postModal" tabindex="-1" aria-labelledby="postModalLabel">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
-                <div class="modal-header border-0 pb-0">
-                    <div class="d-flex align-items-center w-100">
-                        <img src="${profilePic}" class="rounded-circle me-2" width="45" height="45">
-                        <div class="flex-grow-1">
-                            <h6 class="mb-0 fw-bold">${userFullName}</h6>
-                            <select class="form-select form-select-sm border-0 p-0" style="width: auto;">
-                                <option>Público</option>
-                                <option>Privado</option>
-                                <option>Solo amigos</option>
-                            </select>
+                <form id="createPostForm" enctype="multipart/form-data"> 
+                    <div class="modal-header border-0 pb-0">
+                        <div class="d-flex align-items-center w-100">
+                            <img src="${profilePic}" class="rounded-circle me-2" width="45" height="45">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-0 fw-bold">${userFullName}</h6>
+                               
+                                <select class="form-select form-select-sm border-0 p-0" name="post_privacy" style="width: 80px;">
+                                    <option value="Publico" ${defaultPrivacy === 'Publico' ? 'selected' : ''}>Público</option>
+                                    <option value="Amigos" ${defaultPrivacy === 'Amigos' ? 'selected' : ''}>Amigos</option> 
+                                    <option value="Privado" ${defaultPrivacy === 'Privado' ? 'selected' : ''}>Privado</option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                </div>
-                
-                <div class="modal-body p-5 pb-2">
-                    <textarea class="form-control border-0 fs-5" 
-                              placeholder="¿Qué estás pensando, ${userFirstName}?" 
-                              rows="5"
-                              style="resize: none;"></textarea>
-                    
-                    <div class="preview-area mb-3 mt-3"></div>
-                    
-                    <div class="d-flex align-items-center gap-2 border-top pt-3">
-                        <label class="btn btn-custom rounded-pill px-3 py-2">
-                            <i class="bi bi-image me-2"></i>Foto/Video
-                            <input type="file" hidden accept="image/*,video/*">
-                        </label>
+
+                    <div class="modal-body p-5 pb-2">
+                         
+                        <textarea class="form-control border-0 fs-5"
+                                  name="post_text"
+                                  placeholder="¿Qué estás pensando, ${userFirstName}?"
+                                  rows="5"
+                                  style="resize: none;"></textarea>
+
                         
-                        <button class="btn btn-custom rounded-pill px-3 py-2">
-                            <i class="bi bi-filetype-gif me-2"></i>GIF
+                        <div id="postPreviewArea" class="preview-area mb-3 mt-3 d-flex flex-wrap gap-2">
+                           
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2 border-top pt-3">
+                            <label class="btn btn-custom rounded-pill px-3 py-2">
+                                <i class="bi bi-image me-2"></i>Foto/Video
+                                
+                                <input type="file" id="postMediaInput" name="post_media[]" hidden accept="image/*,video/*" multiple>
+                            </label>
+
+                            <button type="button" class="btn btn-custom rounded-pill px-3 py-2">
+                                <i class="bi bi-filetype-gif me-2"></i>GIF
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer border-0">
+                       
+                        <button type="submit" id="submitPostBtn" form="createPostForm" class="btn btn-custom rounded-pill px-4 py-2 w-100">
+                            Publicar
                         </button>
                     </div>
-                </div>
-                
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-custom rounded-pill px-4 py-2 w-100">
-                        Publicar
-                    </button>
-                </div>
+                </form> 
             </div>
         </div>
     </div>`;
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
+
+    const postModalElement = document.getElementById('postModal');
+    const fileInput = document.getElementById('postMediaInput');
+    const previewArea = document.getElementById('postPreviewArea');
+    const postForm = document.getElementById('createPostForm'); 
+    const submitButton = document.getElementById('submitPostBtn'); 
+
+    if (fileInput && previewArea) {
+        fileInput.addEventListener('change', (event) => {
+            handleFileSelect(event, previewArea); 
+        });
+    } else {
+        console.error("Error: No se encontró el input de archivo (#postMediaInput) o el área de preview (#postPreviewArea) para el modal de post.");
+    }
+
+    if (postModalElement) {
+        postModalElement.addEventListener('hidden.bs.modal', () => {
+            if (previewArea) {
+                previewArea.querySelectorAll('video[data-object-url]').forEach(video => {
+                    URL.revokeObjectURL(video.src);
+                });
+                previewArea.innerHTML = ''; 
+            }
+            if (fileInput) {
+                fileInput.value = ''; 
+            }
+             if (submitButton) {
+                 submitButton.disabled = false;
+                 submitButton.innerHTML = 'Publicar';
+             }
+             
+        });
+    }
+
+     if (postForm && submitButton) {
+         postForm.addEventListener('submit', async (e) => {
+             e.preventDefault(); 
+             console.log("Formulario de creación de post enviado.");
+
+             const formData = new FormData(postForm);
+             const postText = formData.get('post_text')?.trim();
+             const postFiles = fileInput.files; 
+
+
+             if (!postText && (!postFiles || postFiles.length === 0)) {
+                 alert('Debes escribir algo o seleccionar al menos un archivo.');
+                 return;
+             }
+
+           
+             submitButton.disabled = true;
+             submitButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Publicando...`;
+
+             try {
+                 const response = await fetch(window.basePath + 'post/create', { 
+                     method: 'POST',
+                     body: formData 
+                 });
+
+                
+                 const responseData = await response.json().catch(() => null); 
+
+                 if (!response.ok) {
+                     
+                     console.error("Error en la respuesta del servidor:", response.status, responseData);
+                     const errorMessage = responseData?.message || `Error del servidor (${response.status}). Inténtalo de nuevo.`;
+                     alert(`Error al publicar: ${errorMessage}`);
+                     throw new Error(errorMessage); 
+                 }
+
+                 
+                 console.log("Respuesta del servidor (Éxito):", responseData);
+
+                 if (responseData?.success) {
+                     alert(responseData.message || 'Publicación creada con éxito.');
+                    
+                     const modalInstance = bootstrap.Modal.getInstance(postModalElement);
+                     if (modalInstance) {
+                         modalInstance.hide();
+                     }
+                     
+                 } else {
+                     
+                     alert(`Error al publicar: ${responseData?.message || 'Respuesta inesperada del servidor.'}`);
+                 }
+
+             } catch (error) {
+                 console.error('Error durante la publicación (Fetch):', error);
+                 
+                 if (!response?.ok) { 
+                      alert('Error de conexión o al procesar la solicitud. Revisa la consola para más detalles.');
+                 }
+             } finally {
+                
+                 submitButton.disabled = false;
+                 submitButton.innerHTML = 'Publicar';
+             }
+         });
+     } else {
+          console.error("Error: No se encontró el formulario (#createPostForm) o el botón de submit (#submitPostBtn).");
+     }
+
     document.querySelectorAll('.feed-input').forEach(input => {
         input.addEventListener('click', () => {
-            new bootstrap.Modal(document.getElementById('postModal')).show();
+            const postModal = new bootstrap.Modal(document.getElementById('postModal'));
+            postModal.show();
         });
     });
+}
+
+function handleFileSelect(event, previewAreaElement) {
+    previewAreaElement.innerHTML = ''; 
+    const files = event.target.files;
+    const MAX_FILES = 10; 
+    const MAX_FILE_SIZE_MB = 100; 
+    if (!files || files.length === 0) {
+        return; 
+    }
+
+    if (files.length > MAX_FILES) {
+        alert(`Puedes seleccionar un máximo de ${MAX_FILES} archivos a la vez.`);
+        event.target.value = ''; 
+        return;
+    }
+
+    const filePromises = [];
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileSizeMB = file.size / 1024 / 1024;
+
+        if (fileSizeMB > MAX_FILE_SIZE_MB) {
+            console.warn(`Archivo omitido por tamaño: ${file.name} (${fileSizeMB.toFixed(2)} MB)`);
+             
+             const errorPreview = createErrorPreview(`"${file.name}" excede el límite de ${MAX_FILE_SIZE_MB} MB.`);
+             previewAreaElement.appendChild(errorPreview);
+            continue; 
+        }
+
+        if (file.type.startsWith('image/')) {
+            filePromises.push(createImagePreview(file, previewAreaElement, event.target));
+        } else if (file.type.startsWith('video/')) {
+            filePromises.push(createVideoPreview(file, previewAreaElement, event.target));
+        } else {
+            console.warn(`Archivo omitido por tipo no soportado: ${file.name} (${file.type})`);
+             const errorPreview = createErrorPreview(`"${file.name}" (Tipo no soportado).`);
+             previewAreaElement.appendChild(errorPreview);
+        }
+    }
+
+}
+
+
+function createImagePreview(file, previewAreaElement, fileInputElement) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            const previewWrapper = document.createElement('div');
+            previewWrapper.className = 'preview-item position-relative border rounded p-1'; 
+
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.alt = `Previsualización de ${file.name}`;
+            img.style.width = '100px'; 
+            img.style.height = '100px';
+            img.style.objectFit = 'cover'; 
+
+            const removeBtn = createRemoveButton(previewWrapper, file, fileInputElement);
+
+            previewWrapper.appendChild(img);
+            previewWrapper.appendChild(removeBtn);
+            previewAreaElement.appendChild(previewWrapper);
+            resolve(); 
+        };
+
+        reader.onerror = (error) => {
+            console.error("Error al leer archivo de imagen:", file.name, error);
+             const errorPreview = createErrorPreview(`Error al leer "${file.name}".`);
+             previewAreaElement.appendChild(errorPreview);
+            reject(error);
+        };
+
+        reader.readAsDataURL(file);
+    });
+}
+
+
+function createVideoPreview(file, previewAreaElement, fileInputElement) {
+    return new Promise((resolve) => {
+        const previewWrapper = document.createElement('div');
+        
+        previewWrapper.className = 'preview-item position-relative border rounded p-1 video-preview-item w-100 mb-2'; 
+        previewWrapper.style.backgroundColor = '#222'; 
+        previewWrapper.style.overflow = 'hidden'; 
+
+        const video = document.createElement('video');
+        const objectURL = URL.createObjectURL(file);
+        video.src = objectURL;
+        video.dataset.objectUrl = 'true'; 
+        video.muted = true; 
+        video.playsInline = true; 
+        video.preload = 'metadata'; 
+        video.controls = true;
+        video.style.width = '100%';
+        video.style.display = 'block';
+        video.style.maxHeight = '400px';
+
+        video.onloadedmetadata = () => {
+            console.log(`Video cargado: ${file.name}, Duración: ${video.duration}s`);
+        };
+
+        video.onerror = (e) => {
+            console.error("Error al cargar la previsualización del video:", file.name, e);
+            previewWrapper.innerHTML = ''; 
+            const errorMsg = createErrorPreview(`Error al cargar video "${file.name}"`);
+            errorMsg.style.width = '100%';
+            errorMsg.style.height = '80px';
+            previewWrapper.appendChild(errorMsg);
+            URL.revokeObjectURL(objectURL);
+        };
+
+        const removeBtn = createRemoveButton(previewWrapper, file, fileInputElement, objectURL);
+        
+        removeBtn.style.top = '5px';
+        removeBtn.style.right = '5px'; 
+
+        previewWrapper.appendChild(video);
+        previewWrapper.appendChild(removeBtn);
+        previewAreaElement.appendChild(previewWrapper);
+        resolve();
+    });
+}
+
+function createErrorPreview(message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'preview-item preview-error text-danger border rounded p-2 d-flex align-items-center';
+    errorDiv.style.width = '100px';
+    errorDiv.style.height = '100px';
+    errorDiv.style.fontSize = '0.8em';
+    errorDiv.innerHTML = `<i class="bi bi-exclamation-triangle-fill me-2"></i> ${message}`;
+    return errorDiv;
+}
+
+function createRemoveButton(wrapper, fileToRemove, fileInputElement, objectUrlToRemove = null) {
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button'; 
+    removeBtn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0 m-1 p-0 d-flex justify-content-center align-items-center';
+    removeBtn.innerHTML = '×'; 
+    removeBtn.style.width = '20px';
+    removeBtn.style.height = '20px';
+    removeBtn.style.borderRadius = '50%';
+    removeBtn.style.lineHeight = '1';
+    removeBtn.title = `Quitar ${fileToRemove.name}`;
+
+    removeBtn.onclick = () => {
+        wrapper.remove(); 
+
+        
+        if (objectUrlToRemove) {
+            URL.revokeObjectURL(objectUrlToRemove);
+        }
+
+        
+        const dataTransfer = new DataTransfer();
+        const currentFiles = Array.from(fileInputElement.files);
+
+        
+        currentFiles.forEach(file => {
+            if (file !== fileToRemove) {
+                dataTransfer.items.add(file);
+            }
+        });
+
+        fileInputElement.files = dataTransfer.files;
+
+        console.log(`Archivo "${fileToRemove.name}" marcado para no ser subido.`);
+    };
+    return removeBtn;
 }
 
 ///////////// VENTANA MODAL "AJUSTES"
@@ -1076,20 +1360,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         settingsModal.show();
     });
-
-    /*
-    document.getElementById('profileSettingsForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        
-        const newName = document.getElementById('profileName').value;
-        const newBio = document.getElementById('profileBio').value;
-        
-        document.querySelector('.card-title').innerText = newName;
-        document.querySelector('.card-text').innerText = newBio;
-        
-        settingsModal.hide();
-    });
-    */
 
     const notificationTrigger = document.querySelector('[title="Notificaciones"]');
     if(notificationTrigger) {

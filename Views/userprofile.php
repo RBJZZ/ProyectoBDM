@@ -152,7 +152,7 @@ if ($coverPicData && $coverPicMime) {
                         </div>
                     </div>
                 </div>
-        
+        <!--
                 <div class="col-md-6">
                    
                     <div class="card mb-3">
@@ -190,7 +190,83 @@ if ($coverPicData && $coverPicMime) {
                    
                 </div>
         
-                
+-->
+
+
+<div class="col-md-6">
+                    <?php if (!empty($userPosts)): ?>
+                        <?php foreach ($userPosts as $post): ?>
+                            <?php
+                                // Preparar datos para este post específico
+                                $postAuthorPic = $profilePicSrc; // Es el perfil del propio usuario
+                                $postAuthorName = htmlspecialchars($nombreCompleto);
+                                $postAuthorUsername = htmlspecialchars($username);
+                                $postDate = new DateTime($post['pub_fecha']);
+                                $timeElapsed = 'Hace un momento'; // Implementa una función para calcular tiempo transcurrido si quieres
+                                $postPrivacyIcon = ($post['pub_privacidad'] == 'Publico') ? 'bi-globe' : (($post['pub_privacidad'] == 'Amigos') ? 'bi-people-fill' : 'bi-lock-fill');
+
+                                // Preparar media (solo la primera por ahora)
+                                $postMediaHtml = '';
+                                if ($post['first_media_id']) {
+                                    // Necesitamos una forma de obtener el BLOB para mostrarlo.
+                                    // Opción 1: Llamar a getMediaById (menos eficiente si hay muchos posts)
+                                    // Opción 2 (Mejor): Crear un endpoint para servir media: get_media.php?id=...
+                                    // Aquí usaremos la opción 2 como ejemplo conceptual:
+                                    $mediaUrl = htmlspecialchars($base_path) . 'get_media.php?id=' . $post['first_media_id']; // ¡NECESITAS CREAR get_media.php!
+
+                                    if ($post['first_media_type'] == 'Imagen') {
+                                        $postMediaHtml = '<img src="' . $mediaUrl . '" class="img-fluid rounded mb-3" alt="Contenido de la publicación">';
+                                    } elseif ($post['first_media_type'] == 'Video') {
+                                        // Para videos, podrías querer mostrar un reproductor
+                                         $postMediaHtml = '<video controls preload="metadata" class="img-fluid rounded mb-3" style="max-height: 500px;">
+                                                            <source src="' . $mediaUrl . '" type="' . htmlspecialchars($post['first_media_mime']) . '">
+                                                            Tu navegador no soporta videos.
+                                                         </video>';
+                                    }
+                                }
+                            ?>
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-3">
+                                        <img src="<?php echo $postAuthorPic; ?>" class="rounded-circle" width="45" height="45" alt="Perfil">
+                                        <div class="ms-3">
+                                            <h6 class="mb-0"><?php echo $postAuthorName; ?> <small class="text-muted">@<?php echo $postAuthorUsername; ?></small></h6>
+                                            <small class="text-muted"><?php echo $timeElapsed; ?> · <i class="bi <?php echo $postPrivacyIcon; ?>"></i> <?php echo htmlspecialchars($post['pub_privacidad']); ?></small>
+                                        </div>
+                                        <!-- Puedes añadir un dropdown (...) con opciones (Editar, Borrar) si $post['pub_id_usuario'] == $loggedInUserId -->
+                                    </div>
+
+                                    <?php if (!empty($post['pub_texto'])): ?>
+                                        <p><?php echo nl2br(htmlspecialchars($post['pub_texto'])); // nl2br para saltos de línea ?></p>
+                                    <?php endif; ?>
+
+                                    <?php echo $postMediaHtml; // Muestra la imagen o video si existe ?>
+
+                                    <div class="d-flex justify-content-between">
+                                        <button class="btn btn-custom btn-sm like-button <?php echo $post['liked_by_user'] ? 'liked' : ''; ?>" data-post-id="<?php echo $post['pub_id_publicacion']; ?>">
+                                            <i class="bi <?php echo $post['liked_by_user'] ? 'bi-hand-thumbs-up-fill' : 'bi-hand-thumbs-up'; ?>"></i>
+                                            <span class="like-count"><?php echo $post['like_count']; ?></span>
+                                        </button>
+                                        <button class="btn btn-custom btn-sm comment-button" data-post-id="<?php echo $post['pub_id_publicacion']; ?>">
+                                            <i class="bi bi-chat"></i> <?php echo $post['comment_count']; ?> Comentarios
+                                        </button>
+                                         <!-- Puedes añadir botón de compartir -->
+                                    </div>
+                                     <!-- Área para comentarios (podría cargarse con AJAX) -->
+                                     <div class="comments-section mt-3" id="comments-<?php echo $post['pub_id_publicacion']; ?>" style="display: none;">
+                                         <!-- Los comentarios irían aquí -->
+                                     </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="card">
+                            <div class="card-body text-center text-muted">
+                                Aún no has realizado ninguna publicación.
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
                 <div class="col-md-3">
                     <div class="card mb-3">
                         <div class="card-body">

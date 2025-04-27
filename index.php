@@ -4,146 +4,46 @@
         session_start();
     }
 
- 
+    // Incluir controladores
     require_once __DIR__ . '/Controllers/UserController.php';
+    require_once __DIR__ . '/Controllers/PostController.php';
+    // require_once __DIR__ . '/Controllers/ShortController.php';
+    // require_once __DIR__ . '/Controllers/ProductController.php';
 
     $request_uri = $_SERVER['REQUEST_URI'];
     $request_method = $_SERVER['REQUEST_METHOD'];
-    $base_path = '/ProyectoBDM/';
+    $base_path = '/ProyectoBDM/'; // Asegúrate que termine con '/'
+    if (substr($base_path, -1) !== '/') {
+        $base_path .= '/';
+    }
 
-   
-    if (!class_exists('UserController')) {
+    // Instanciar Controladores
+    try {
+        $userController = new UserController();
+        $postController = new PostController();
+        // $shortController = new ShortController();
+        // $productController = new ProductController();
+    } catch (Throwable $e) {
         http_response_code(500);
-        error_log("Error Crítico: No se pudo cargar UserController.php.");
+        error_log("Error Crítico al instanciar controladores: " . $e->getMessage());
         echo "Error interno del servidor.";
         exit();
     }
-    $userController = new UserController();
 
+    // Limpiar URI de parámetros GET
+    $clean_uri = strtok($request_uri, '?');
 
-    if (strpos($request_uri, $base_path . 'registro') === 0) {
-        $clean_uri_register = strtok($request_uri, '?'); 
-        if ($clean_uri_register === $base_path . 'registro') {
-             if ($request_method === 'POST') {
-                $userController->registrar();
-                exit();
-            } elseif ($request_method === 'GET') {
-                $userController->mostrarFormularioRegistro($base_path);
-                exit();
-            } else {
-                 http_response_code(405); echo "Método no permitido para /registro."; exit();
-            }
-        } else {
-             http_response_code(404); echo "Ruta de registro no válida."; exit();
-        }
-    }
+    // --- Routing ---
+    // El orden es importante: rutas más específicas primero, luego más generales,
+    // y el root/404 al final.
 
-    
-    elseif (strpos($request_uri, $base_path . 'login') === 0) {
-        $clean_uri_login = strtok($request_uri, '?');
-        if ($clean_uri_login === $base_path . 'login') {
-            if ($request_method === 'POST') {
-                $userController->handleLogin();
-                exit();
-            } elseif ($request_method === 'GET') {
-                $userController->mostrarFormularioLogin($base_path);
-                exit();
-            } else {
-                 http_response_code(405); echo "Método no permitido para /login."; exit();
-            }
-        } else {
-            http_response_code(404); echo "Subruta de login no encontrada"; exit();
-        }
-   }
-
-   elseif (strpos($request_uri, $base_path . 'feed') === 0) {
-        $clean_uri_feed = strtok($request_uri, '?'); 
-        if ($clean_uri_feed === $base_path . 'feed') {
-            if ($request_method === 'GET') {
-                $userController->showFeed($base_path);
-                exit();
-            } else {
-                http_response_code(405); echo "Método no permitido para /feed."; exit();
-            }
-        } else {
-            http_response_code(404); echo "Subruta de feed no encontrada"; exit();
-        }
-    }
-
-   
-    elseif (strpos($request_uri, $base_path . 'profile') === 0) {
-        $clean_uri_profile = strtok($request_uri, '?');
-
-  
-        if ($clean_uri_profile === $base_path . 'profile/update') {
-            if ($request_method === 'POST') {
-                $userController->handleProfileUpdate();
-               
-            } else {
-                 http_response_code(405); echo "Método no permitido para actualizar perfil. Se requiere POST."; exit();
-            }
-        }
-
-        elseif ($clean_uri_profile === $base_path . 'profile/verify-password') {
-            if ($request_method === 'POST') {
-                $userController->verifyCurrentPassword();
-            } else {
-                 http_response_code(405); echo "Método no permitido para verificar contraseña. Se requiere POST."; exit();
-            }
-        }
-        
-        elseif ($clean_uri_profile === $base_path . 'profile/update-password') {
-            if ($request_method === 'POST') {
-                $userController->updatePassword();
-            } else {
-                 http_response_code(405); echo "Método no permitido para actualizar contraseña. Se requiere POST."; exit();
-            }
-        }
-        
-        elseif ($clean_uri_profile === $base_path . 'profile') {
-            if ($request_method === 'GET') {
-                $userController->showMyProfile($base_path);
-                exit();
-            } else {
-                 http_response_code(405); echo "Método no permitido para ver /profile."; exit();
-            }
-        }
-     
-        else {
-             http_response_code(404); echo "Ruta de perfil no válida."; exit();
-        }
-   } 
-
-    
-
-
-     elseif (strpos($request_uri, $base_path . 'logout') === 0) {
-        $clean_uri_logout = strtok($request_uri, '?');
-        if ($clean_uri_logout === $base_path . 'logout') {
-             if ($request_method === 'GET') { 
-               
-                session_unset();
-                session_destroy();
-                header('Location: ' . $base_path . 'login?status=loggedout');
-                exit();
-             } else {
-                  http_response_code(405); echo "Método no permitido para /logout."; exit();
-             }
-        } else {
-            http_response_code(404); echo "Ruta de logout no válida."; exit();
-        }
-    }
-
-
-   
-    elseif ($request_uri === $base_path || $request_uri === $base_path . 'index.php') {
+    // Ruta Raíz ('/')
+    if ($clean_uri === $base_path || $clean_uri === rtrim($base_path, '/') . '/index.php') {
         if ($request_method === 'GET') {
-          
             if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
                 header('Location: ' . $base_path . 'feed');
                 exit();
             } else {
-               
                 $userController->mostrarFormularioLogin($base_path);
                 exit();
             }
@@ -154,10 +54,152 @@
         }
     }
 
-    
+    // Rutas de Autenticación y Registro
+    elseif ($clean_uri === $base_path . 'login') {
+         if ($request_method === 'POST') {
+            $userController->handleLogin();
+            exit();
+        } elseif ($request_method === 'GET') {
+            $userController->mostrarFormularioLogin($base_path);
+            exit();
+        } else {
+             http_response_code(405); echo "Método no permitido para /login."; exit();
+        }
+    }
+    elseif ($clean_uri === $base_path . 'logout') {
+         if ($request_method === 'GET') {
+            session_unset();
+            session_destroy();
+            header('Location: ' . $base_path . 'login?status=loggedout');
+            exit();
+         } else {
+              http_response_code(405); echo "Método no permitido para /logout."; exit();
+         }
+    }
+     elseif ($clean_uri === $base_path . 'registro') {
+         if ($request_method === 'POST') {
+            $userController->registrar();
+            exit();
+        } elseif ($request_method === 'GET') {
+            $userController->mostrarFormularioRegistro($base_path);
+            exit();
+        } else {
+             http_response_code(405); echo "Método no permitido para /registro."; exit();
+        }
+    }
+
+    // Ruta del Feed Principal
+    elseif ($clean_uri === $base_path . 'feed') {
+        if ($request_method === 'GET') {
+            $userController->showFeed($base_path);
+            exit();
+        } else {
+            http_response_code(405); echo "Método no permitido para /feed."; exit();
+        }
+    }
+
+    // Rutas de Perfil de Usuario
+    elseif (strpos($clean_uri, $base_path . 'profile') === 0) {
+        if ($clean_uri === $base_path . 'profile/update') {
+            if ($request_method === 'POST') {
+                $userController->handleProfileUpdate();
+                exit();
+            } else {
+                 http_response_code(405); echo "Método no permitido para actualizar perfil. Se requiere POST."; exit();
+            }
+        }
+        elseif ($clean_uri === $base_path . 'profile/verify-password') {
+            if ($request_method === 'POST') {
+                $userController->verifyCurrentPassword();
+                exit();
+            } else {
+                 http_response_code(405); echo "Método no permitido para verificar contraseña. Se requiere POST."; exit();
+            }
+        }
+        elseif ($clean_uri === $base_path . 'profile/update-password') {
+            if ($request_method === 'POST') {
+                $userController->updatePassword();
+                exit();
+            } else {
+                 http_response_code(405); echo "Método no permitido para actualizar contraseña. Se requiere POST."; exit();
+            }
+        }
+        elseif ($clean_uri === $base_path . 'profile') {
+            if ($request_method === 'GET') {
+                $userController->showMyProfile($base_path);
+                exit();
+            } else {
+                 http_response_code(405); echo "Método no permitido para ver /profile."; exit();
+            }
+        }
+        else {
+             http_response_code(404); echo "Ruta de perfil no válida."; exit();
+        }
+    }
+
+    // Rutas de Publicaciones (Posts)
+    elseif (preg_match('#^' . $base_path . 'post/create$#', $clean_uri)) {
+        if ($request_method === 'POST') {
+            $postController->store();
+        } else {
+            http_response_code(405); echo "Método no permitido para /post/create.";
+        }
+        exit();
+    }
+    elseif (preg_match('#^' . $base_path . 'post/(\d+)/like$#', $clean_uri, $matches)) {
+        if ($request_method === 'POST') {
+            $postId = (int)$matches[1];
+            $postController->like($postId);
+        } else {
+            http_response_code(405); echo "Método no permitido para /post/{id}/like.";
+        }
+        exit();
+    }
+    elseif (preg_match('#^' . $base_path . 'post/(\d+)/unlike$#', $clean_uri, $matches)) {
+        if ($request_method === 'POST' || $request_method === 'DELETE') {
+            $postId = (int)$matches[1];
+            $postController->unlike($postId);
+        } else {
+            http_response_code(405); echo "Método no permitido para /post/{id}/unlike (se requiere POST o DELETE).";
+        }
+        exit();
+    }
+    elseif (preg_match('#^' . $base_path . 'post/(\d+)/comment$#', $clean_uri, $matches)) {
+        if ($request_method === 'POST') {
+            $postId = (int)$matches[1];
+            $postController->comment($postId);
+        } else {
+            http_response_code(405); echo "Método no permitido para /post/{id}/comment.";
+        }
+        exit();
+    }
+    elseif (preg_match('#^' . $base_path . 'post/(\d+)$#', $clean_uri, $matches)) {
+        if ($request_method === 'GET') {
+            $postId = (int)$matches[1];
+            $postController->show($postId);
+        } else {
+            http_response_code(405); echo "Método no permitido para /post/{id}.";
+        }
+        exit();
+    }
+
+    // --- Rutas de Reels (Shorts) --- // <<< Pendiente >>>
+    // elseif (preg_match(...)) { ... }
+
+    // --- Rutas de Marketplace (Products) --- // <<< Pendiente >>>
+    // elseif (preg_match(...)) { ... }
+
+    // --- Manejador 404 (Not Found) ---
     else {
         http_response_code(404);
-        echo "Página no encontrada";
+        error_log("404 Not Found: " . $request_uri . " (Clean URI: " . $clean_uri . ")");
+        // Considera cargar una vista de error bonita
+        if (file_exists(__DIR__ . '/Views/errors/404.php')) {
+             include __DIR__ . '/Views/errors/404.php';
+        } else {
+            echo "Página no encontrada";
+        }
+        exit();
     }
 
 ?>

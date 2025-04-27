@@ -5,6 +5,7 @@
 
 
 require_once __DIR__ . '/../Models/User.php';
+require_once __DIR__ . '/../Models/Post.php';
 
 
 class UserController {
@@ -254,6 +255,7 @@ class UserController {
             $userModel = new User();
             $userData = $userModel->obtenerPerfilUsuario($loggedInUserId);
 
+
         } catch (Exception $e) {
             error_log("Error al instanciar/llamar modelo User en showFeed: " . $e->getMessage());
             http_response_code(500);
@@ -297,8 +299,11 @@ class UserController {
         $userData = null;
         try {
             $userModel = new User();
+            $postModel = new Post();
             $userData = $userModel->obtenerPerfilUsuario($loggedInUserId);
+            $userPosts=$postModel->getUserPosts($loggedInUserId, $loggedInUserId, 20, 0);
 
+            error_log("Se obtuvieron " . count($userPosts) . " posts para el perfil del User ID: {$loggedInUserId} via SP");
         } catch (Exception $e) {
             error_log("Error al instanciar/llamar modelo User en showMyProfile: " . $e->getMessage());
             http_response_code(500);
