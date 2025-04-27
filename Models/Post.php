@@ -105,7 +105,7 @@ class Post {
 
            
             if (!empty($mediaBlob)) {
-                if (!$stmt->send_long){
+                if (!$stmt->send_long_data(5, $mediaBlob)){
                      error_log("Error sending long data (Post::addPostMedia): " . $stmt->error);
                      return false;
                 }
