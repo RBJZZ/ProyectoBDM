@@ -7,8 +7,8 @@
     // Incluir controladores
     require_once __DIR__ . '/Controllers/UserController.php';
     require_once __DIR__ . '/Controllers/PostController.php';
-    // require_once __DIR__ . '/Controllers/ShortController.php';
-    // require_once __DIR__ . '/Controllers/ProductController.php';
+    require_once __DIR__ . '/Controllers/ShortController.php';
+    require_once __DIR__ . '/Controllers/ProductController.php';
 
     $request_uri = $_SERVER['REQUEST_URI'];
     $request_method = $_SERVER['REQUEST_METHOD'];
@@ -21,6 +21,10 @@
     try {
         $userController = new UserController();
         $postController = new PostController();
+        // $chatController = new ChatController(); // <-- Descomentar cuando exista
+        // $communityController = new CommunityController(); // <-- Descomentar cuando exista
+        $productController = new ProductController(); // <-- Descomentar cuando exista
+        // $searchController = new SearchController(); // <-- Descomentar cuando exista
         // $shortController = new ShortController();
         // $productController = new ProductController();
     } catch (Throwable $e) {
@@ -137,7 +141,96 @@
         }
     }
 
-    // Rutas de Publicaciones (Posts)
+    elseif ($clean_uri === $base_path . 'chat') {
+        if ($request_method === 'GET') {
+            // Requerirá autenticación probablemente
+            // $chatController = new ChatController(); // Asegúrate de instanciar
+            // $chatController->showChatPage($base_path);
+             echo "Página de Chat (Ruta funcional, pendiente de implementación)"; // Salida Temporal
+            exit();
+        } else {
+            http_response_code(405); echo "Método no permitido para /chat."; exit();
+        }
+    }
+
+    elseif ($clean_uri === $base_path . 'communities') {
+        if ($request_method === 'GET') {
+             // $communityController = new CommunityController(); // Asegúrate de instanciar
+             // $communityController->listCommunities($base_path);
+             echo "Página de Comunidades (Ruta funcional, pendiente de implementación)"; // Salida Temporal
+            exit();
+        } else {
+            http_response_code(405); echo "Método no permitido para /communities."; exit();
+        }
+    }
+
+    elseif ($clean_uri === $base_path . 'marketplace') {
+        if ($request_method === 'GET') {
+             $productController = new ProductController(); // Asegúrate de instanciar
+             $productController->showMarketplace($base_path);
+             echo "Página de Marketplace (Ruta funcional, pendiente de implementación)"; // Salida Temporal
+            exit();
+        } else {
+            http_response_code(405); echo "Método no permitido para /marketplace."; exit();
+        }
+    }
+
+    elseif ($clean_uri === $base_path . 'tags/market') {
+        if ($request_method === 'GET') {
+             // Crear TagController.php si no existe
+             // require_once __DIR__ . '/Controllers/TagController.php';
+             // $tagController = new TagController();
+             // $tagController->getMarketTags(); // Método que llama al SP 'T'
+             echo json_encode(['success'=>true, 'data'=>[['tag_id'=>1, 'tag_nombre'=>'Electrónica Temporal'],['tag_id'=>2, 'tag_nombre'=>'Hogar Temporal']]]); // Respuesta Temporal
+             exit();
+        } else {
+            http_response_code(405); echo "Método no permitido para /tags/market."; exit();
+        }
+    }
+
+    elseif ($clean_uri === $base_path . 'product/create') { // Ruta para el submit del modal
+        if ($request_method === 'POST') {
+             // require_once __DIR__ . '/Controllers/ProductController.php'; // Asegúrate que esté incluido
+             // $productController = new ProductController(); // Asegúrate que esté instanciado
+             // $productController->store(); // Método que manejará la creación
+              echo json_encode(['success'=>true, 'message'=>'Publicación de producto recibida (pendiente implementar backend completo).', 'productId'=>rand(100,999)]); // Respuesta Temporal
+             exit();
+        } else {
+            http_response_code(405); echo "Método no permitido para /product/create."; exit();
+        }
+    }
+
+    elseif ($clean_uri === $base_path . 'search') {
+        if ($request_method === 'GET') {
+            // Obtener el query de $_GET
+            $searchQuery = $_GET['query'] ?? '';
+            // $searchController = new SearchController(); // Asegúrate de instanciar
+            // $searchController->performSearch($base_path, $searchQuery);
+            echo "Página de Búsqueda (Ruta funcional, pendiente de implementación). Query: '" . htmlspecialchars($searchQuery) . "'"; // Salida Temporal
+            exit();
+        } else {
+            http_response_code(405); echo "Método no permitido para /search (Se espera GET)."; exit();
+        }
+    }
+
+    elseif (preg_match('#^' . $base_path . 'post/update/(\d+)$#', $clean_uri, $matches)) { 
+        if ($request_method === 'POST') {
+            $postId = (int)$matches[1];
+            $postController->update($postId);
+        } else {
+            http_response_code(405); echo "Método no permitido para /post/update/{id}. Se requiere POST.";
+        }
+        exit();
+    }
+    elseif (preg_match('#^' . $base_path . 'post/delete/(\d+)$#', $clean_uri, $matches)) { 
+        if ($request_method === 'POST' || $request_method === 'DELETE') {
+            $postId = (int)$matches[1];
+            $postController->delete($postId); 
+        } else {
+            http_response_code(405); echo "Método no permitido para /post/delete/{id}. Se requiere POST o DELETE.";
+        }
+        exit();
+    }
     elseif (preg_match('#^' . $base_path . 'post/create$#', $clean_uri)) {
         if ($request_method === 'POST') {
             $postController->store();
@@ -182,7 +275,7 @@
         }
         exit();
     }
-
+    
     // --- Rutas de Reels (Shorts) --- // <<< Pendiente >>>
     // elseif (preg_match(...)) { ... }
 

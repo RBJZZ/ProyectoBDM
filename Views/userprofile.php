@@ -197,27 +197,24 @@ if ($coverPicData && $coverPicMime) {
                     <?php if (!empty($userPosts)): ?>
                         <?php foreach ($userPosts as $post): ?>
                             <?php
-                                // Preparar datos para este post específico
-                                $postAuthorPic = $profilePicSrc; // Es el perfil del propio usuario
+                          
+                                $postAuthorPic = $profilePicSrc; 
                                 $postAuthorName = htmlspecialchars($nombreCompleto);
                                 $postAuthorUsername = htmlspecialchars($username);
                                 $postDate = new DateTime($post['pub_fecha']);
-                                $timeElapsed = 'Hace un momento'; // Implementa una función para calcular tiempo transcurrido si quieres
+                                $timeElapsed = 'Hace un momento'; 
                                 $postPrivacyIcon = ($post['pub_privacidad'] == 'Publico') ? 'bi-globe' : (($post['pub_privacidad'] == 'Amigos') ? 'bi-people-fill' : 'bi-lock-fill');
 
-                                // Preparar media (solo la primera por ahora)
+                                
                                 $postMediaHtml = '';
                                 if ($post['first_media_id']) {
-                                    // Necesitamos una forma de obtener el BLOB para mostrarlo.
-                                    // Opción 1: Llamar a getMediaById (menos eficiente si hay muchos posts)
-                                    // Opción 2 (Mejor): Crear un endpoint para servir media: get_media.php?id=...
-                                    // Aquí usaremos la opción 2 como ejemplo conceptual:
-                                    $mediaUrl = htmlspecialchars($base_path) . 'get_media.php?id=' . $post['first_media_id']; // ¡NECESITAS CREAR get_media.php!
+                                    
+                                    $mediaUrl = htmlspecialchars($base_path) . 'get_media.php?id=' . $post['first_media_id']; 
 
                                     if ($post['first_media_type'] == 'Imagen') {
-                                        $postMediaHtml = '<img src="' . $mediaUrl . '" class="img-fluid rounded mb-3" alt="Contenido de la publicación">';
+                                        $postMediaHtml = '<img src="' . $mediaUrl . '" class="img-fluid rounded mb-3" alt="Contenido de la publicación" style="width: 100%; height: auto; display: block;">';
                                     } elseif ($post['first_media_type'] == 'Video') {
-                                        // Para videos, podrías querer mostrar un reproductor
+                                        
                                          $postMediaHtml = '<video controls preload="metadata" class="img-fluid rounded mb-3" style="max-height: 500px;">
                                                             <source src="' . $mediaUrl . '" type="' . htmlspecialchars($post['first_media_mime']) . '">
                                                             Tu navegador no soporta videos.
@@ -225,7 +222,7 @@ if ($coverPicData && $coverPicMime) {
                                     }
                                 }
                             ?>
-                            <div class="card mb-3">
+                            <div class="card mb-3 post-card" data-post-id="<?php echo htmlspecialchars($post['pub_id_publicacion']);?>">
                                 <div class="card-body">
                                     <div class="d-flex align-items-center mb-3">
                                         <img src="<?php echo $postAuthorPic; ?>" class="rounded-circle" width="45" height="45" alt="Perfil">
@@ -233,14 +230,57 @@ if ($coverPicData && $coverPicMime) {
                                             <h6 class="mb-0"><?php echo $postAuthorName; ?> <small class="text-muted">@<?php echo $postAuthorUsername; ?></small></h6>
                                             <small class="text-muted"><?php echo $timeElapsed; ?> · <i class="bi <?php echo $postPrivacyIcon; ?>"></i> <?php echo htmlspecialchars($post['pub_privacidad']); ?></small>
                                         </div>
-                                        <!-- Puedes añadir un dropdown (...) con opciones (Editar, Borrar) si $post['pub_id_usuario'] == $loggedInUserId -->
+
+                                         <!-- ===== INICIO: Botón de Ajustes del Post ===== -->
+                                            <?php 
+                                            // Asumiendo que tienes una variable como $loggedInUserId con el ID del usuario logueado
+                                            // Y que $post['pub_id_usuario'] es el ID del autor del post
+                                            // Muestra el botón solo si el usuario logueado es el autor del post
+                                            if (isset($loggedInUserId) && $loggedInUserId == $post['pub_id_usuario']): 
+                                            ?>
+                                            <div class="ms-auto dropdown">
+                                                <button class="btn btn-sm btn-link text-muted" type="button" id="postOptionsDropdown<?php echo $post['pub_id_publicacion']; ?>" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="bi bi-three-dots"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="postOptionsDropdown<?php echo $post['pub_id_publicacion']; ?>">
+                                                    <li><a class="dropdown-item edit-post-btn" href="#" data-post-id="<?php echo $post['pub_id_publicacion']; ?>">
+                                                        <i class="bi bi-pencil-square me-2"></i>Editar
+                                                    </a></li>
+                                                    <li><a class="dropdown-item delete-post-btn" href="#" data-post-id="<?php echo $post['pub_id_publicacion']; ?>">
+                                                        <i class="bi bi-trash3 me-2"></i>Eliminar
+                                                    </a></li>
+                                                </ul>
+                                            </div>
+                                            <?php endif; ?>
+
+                                    
                                     </div>
 
+                                    <?php
+                                    $existingMediaId=null;
+
+                                    if(isset($post['first_media_id']) && !empty($post['first_media_id'])){
+                                        $existingMediaId=$post['first_media_id'];
+                                    }
+                                    ?>
+
                                     <?php if (!empty($post['pub_texto'])): ?>
-                                        <p><?php echo nl2br(htmlspecialchars($post['pub_texto'])); // nl2br para saltos de línea ?></p>
+                                        <p class="post-text"><?php echo nl2br(htmlspecialchars($post['pub_texto'])); ?></p>
                                     <?php endif; ?>
 
-                                    <?php echo $postMediaHtml; // Muestra la imagen o video si existe ?>
+                                    <?php if(!empty($postMediaHtml)){
+                                    
+                                    echo '<div class="post-media-content" data-media-id="' . htmlspecialchars($existingMediaId) . '">';
+                                    
+                                    ?>
+                                    <?php echo $postMediaHtml;?>
+
+                                    <?php
+
+                                    echo '</div>';
+                                    }
+                                    
+                                    ?>
 
                                     <div class="d-flex justify-content-between">
                                         <button class="btn btn-custom btn-sm like-button <?php echo $post['liked_by_user'] ? 'liked' : ''; ?>" data-post-id="<?php echo $post['pub_id_publicacion']; ?>">
