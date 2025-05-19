@@ -40,3 +40,102 @@
     color:var(--night-text);
 }
 
+.message-bubble { /* Clase que añadimos en JS a cada div de mensaje */
+    max-width: 75%; /* Las burbujas no deben ocupar todo el ancho */
+    margin-bottom: 0.75rem !important; /* Espacio entre burbujas */
+}
+
+.message-bubble .bubble-content {
+    padding: 0.65rem 1rem; /* Padding interno de la burbuja */
+    border-radius: 1.25rem; /* Bordes redondeados */
+    word-wrap: break-word; /* Para que el texto largo se ajuste */
+    line-height: 1.4;
+    display: inline-block; /* Importante para que la burbuja se ajuste al contenido */
+    text-align: left; /* Asegurar alineación del texto dentro de la burbuja */
+}
+
+/* Estilos para mensajes ENVIADOS (por el usuario actual) */
+.message-bubble.sent {
+    margin-left: auto; /* Empuja la burbuja a la derecha */
+    display: flex; /* Para poder usar justify-content */
+    justify-content: flex-end; /* Alinea el contenido de la burbuja (bubble-content) a la derecha del contenedor message-bubble */
+}
+
+.message-bubble.sent .bubble-content {
+    background-color: var(--bs-primary); /* O tu color personalizado, ej: #007bff */
+    color: white;
+    border-top-right-radius: 0.5rem; /* Opcional: para dar forma de "cola" */
+}
+
+/* Estilos para mensajes RECIBIDOS */
+.message-bubble.received {
+    margin-right: auto; /* Empuja la burbuja a la izquierda */
+    display: flex;
+    justify-content: flex-start;
+}
+
+.message-bubble.received .bubble-content {
+    background-color: #e9ecef; /* Un gris claro */
+    color: #212529;
+    border-top-left-radius: 0.5rem; /* Opcional: para dar forma de "cola" */
+}
+
+.message-bubble .bubble-content p {
+    margin-bottom: 0.25rem; /* Menor espacio si solo hay texto */
+}
+.message-bubble .bubble-content p:last-child {
+    margin-bottom: 0;
+}
+
+
+.message-bubble .message-media { /* Contenedor para la imagen/video */
+    margin-top: 0.5rem;
+    max-width: 100%; /* Para que se ajuste a la burbuja */
+    overflow: hidden; /* Para que los bordes redondeados se apliquen bien */
+    border-radius: 0.75rem; /* Redondear la media también */
+}
+
+.message-bubble .message-media img,
+.message-bubble .message-media video {
+    display: block; /* Evitar espacio extra debajo de la imagen */
+    max-width: 100%;
+    max-height: 300px; /* Límite de altura para media */
+    border-radius: 0.75rem; /* Asegurar que la imagen/video también esté redondeado */
+    object-fit: cover;
+}
+
+.message-bubble .message-file-link {
+    display: block;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background-color: rgba(0,0,0,0.05);
+    border-radius: 0.5rem;
+    text-decoration: none;
+    color: inherit;
+}
+.message-bubble.sent .message-file-link {
+    background-color: rgba(255,255,255,0.2);
+}
+
+
+.message-bubble .message-time {
+    font-size: 0.7rem;
+    color: #6c757d; /* Color de texto muted de Bootstrap */
+    margin-top: 0.35rem;
+    display: block;
+    text-align: right; /* Alinear la hora a la derecha dentro de la burbuja */
+}
+
+.message-bubble.sent .message-time {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Para la imagen de perfil del emisor en mensajes recibidos */
+.message-emitter-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 0.75rem;
+    align-self: flex-end; /* Alinear al final de la burbuja */
+}

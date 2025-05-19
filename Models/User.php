@@ -1,56 +1,28 @@
 <?php
 
-include_once 'Connection.php';
+// Asegúrate de que Connection.php ya está actualizado a PDO
+include_once 'Connection.php'; // No cambia
 
-class User{
+class User {
+    // La conexión ahora será un objeto PDO
+    private PDO $connection; // Tipado para claridad
 
-    
-    private $connection;
-
-    //Atributos usuario
-
-    private ?int $id; 
-    private string $username; 
-    private string $nombre; 
-    private string $apellidoPaterno; 
-    private ?string $apellidoMaterno; 
-    private DateTime $fechaNacimiento; 
-    private string $contrasena; 
-    private string $email; 
-    private ?string $telefono; 
-    private string $genero; 
-    private DateTime $fechaAlta; 
-    private ?DateTime $fechaBaja; 
-    private ?string $ciudad; 
-    private ?string $provincia; 
-    private ?string $pais; 
-    private string $privacidad; 
-    private $fotoPerfil; 
-    private ?string $fotoPerfilMime;
-    private $fotoPortada;
-    private ?string $fotoPortadaMime;
-    private ?string $biografia;
-
-    //constructor conexion
 
     public function __construct() {
-        $connection_obj = new Connection(); 
-        $this->connection = $connection_obj->getConnection();
+        $connection_obj = new Connection();
+        $this->connection = $connection_obj->getConnection(); 
     }
 
-
-    public function registrarUsuario(array $userData): bool
-    {
+    public function registrarUsuario(array $userData): bool {
         $action_code = 'I';
         $userId = null; 
 
-        
         $username = $userData['username'] ?? null;
         $nombre = $userData['nombre'] ?? null;
         $apellidoPaterno = $userData['apellidoPaterno'] ?? null;
         $apellidoMaterno = $userData['apellidoMaterno'] ?? null;
         $fechaNacimiento = $userData['fechaNacimiento'] ?? null;
-        $contrasenaHash = $userData['contrasena'] ?? null; 
+        $contrasenaHash = $userData['contrasena'] ?? null;
         $email = $userData['email'] ?? null;
         $telefono = $userData['telefono'] ?? null;
         $genero = $userData['genero'] ?? null;
@@ -59,99 +31,85 @@ class User{
         $pais = $userData['pais'] ?? null;
         $privacidad = $userData['privacidad'] ?? 'Publico';
         $fotoPerfil = $userData['fotoPerfil'] ?? null;
-        $fotoPerfilMime = $userData['fotoPerfilMime'] ?? null; 
+        $fotoPerfilMime = $userData['fotoPerfilMime'] ?? null;
         $fotoPortada = $userData['fotoPortada'] ?? null;
-        $fotoPortadaMime = $userData['fotoPortadaMime'] ?? null; 
+        $fotoPortadaMime = $userData['fotoPortadaMime'] ?? null;
         $biografia = $userData['biografia'] ?? null;
 
-        try {
-          
-            $stmt = $this->connection->prepare("CALL sp_user_manager(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"); // 20 placeholders
 
-            $stmt->bind_param("sisssssssssssssbsbss", 
+        $sql = "CALL sp_user_manager(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        try {
+            $stmt = $this->connection->prepare($sql);
+
+            $params = [
                 $action_code, $userId, $username, $nombre, $apellidoPaterno,
                 $apellidoMaterno, $fechaNacimiento, $contrasenaHash, $email, $telefono,
                 $genero, $ciudad, $provincia, $pais, $privacidad,
-                $fotoPerfil, $fotoPerfilMime, $fotoPortada, $fotoPortadaMime, $biografia 
-            );
-            
-        
-            $success = $stmt->execute();
+                $fotoPerfil, $fotoPerfilMime, $fotoPortada, $fotoPortadaMime, $biografia
+            ];
 
-            
-            return $success && $stmt->affected_rows > 0;
+            // Para los BLOBs, es mejor especificar PDO::PARAM_LOB si se usa bindParam individualmente.
+            // Sin embargo, al pasar un array a execute(), PDO suele deducir el tipo correctamente para MySQL.
+            // Si hay problemas, se puede usar bindParam explícito:
+            // $stmt->bindParam(16, $fotoPerfil, PDO::PARAM_LOB);
+            // $stmt->bindParam(18, $fotoPortada, PDO::PARAM_LOB);
+            // Y luego $stmt->execute() sin esos parámetros en el array (o con nulls y luego re-bind).
+            // Por simplicidad, intentaremos con el array directo primero.
 
-        } catch (mysqli_sql_exception $e) {
-            error_log("Error BBDD al registrar usuario (sp_manage_user_char 'I'): " . $e->getMessage() . " (Código: " . $e->getCode() . ")");
+            $success = $stmt->execute($params);
+
+            // rowCount() para INSERT, UPDATE, DELETE
+            return $success && $stmt->rowCount() > 0;
+
+        } catch (PDOException $e) { // Capturamos PDOException
+            error_log("Error BBDD (PDO) al registrar usuario (sp_user_manager 'I'): " . $e->getMessage() . " (Código: " . $e->getCode() . ")");
             return false;
-        } catch (Exception $e) {
-            error_log("Error general al registrar usuario: " . $e->getMessage());
-            return false;
-        } finally {
-            if (isset($stmt) && $stmt instanceof mysqli_stmt) {
-                $stmt->close();
-            }
         }
+        // El $stmt se cierra automáticamente cuando sale del ámbito o se reasigna/destruye,
+        // o cuando se obtienen todos los resultados si es una consulta SELECT.
+        // No hay un $stmt->close() explícito obligatorio como en mysqli para la mayoría de los casos de uso.
     }
 
-
-    public function LoginUsuarioEmail(string $email): ?array
-    {
+    public function LoginUsuarioEmail(string $email): ?array {
         $action_code = 'L';
+        $userId = null; // Placeholder para los parámetros no usados por esta acción
+        $nullVar = null; // Placeholder
+
+        // El SP espera 20 parámetros
+        $sql = "CALL sp_user_manager(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try {
-             
-            $stmt = $this->connection->prepare("CALL sp_user_manager(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt = $this->connection->prepare($sql);
 
-            $stmt->bind_param("sisssssssssssssbsbss",
-                $action_code,   
-                $userId,        
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $email,         
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar        
-            );
-            $stmt->execute();
-            $result = $stmt->get_result();
+            $params = [
+                $action_code, $userId, $nullVar, $nullVar, $nullVar,
+                $nullVar, $nullVar, $nullVar, $email, $nullVar,
+                $nullVar, $nullVar, $nullVar, $nullVar, $nullVar,
+                $nullVar, $nullVar, $nullVar, $nullVar, $nullVar
+            ];
+            $stmt->execute($params);
 
-            if ($result->num_rows === 1) {
-                return $result->fetch_assoc();
-            } else {
-                return null;
-            }
+            // fetch() ya devuelve asociativo por la opción PDO::ATTR_DEFAULT_FETCH_MODE en Connection.php
+            $userData = $stmt->fetch();
 
-        } catch (mysqli_sql_exception $e) {
-            error_log("Error BBDD Login ('L'): " . $e->getMessage() . " Email: $email"); 
+            // Si fetch() no encuentra fila, devuelve false.
+            return $userData ?: null;
+
+        } catch (PDOException $e) {
+            error_log("Error BBDD (PDO) Login ('L'): " . $e->getMessage() . " Email: $email");
             return null;
-        } finally {
-             if (isset($stmt) && $stmt instanceof mysqli_stmt) {
-                $stmt->close();
-            }
-             
-             if (isset($result) && $result instanceof mysqli_result) {
-                $result->free();
-             }
         }
+        // $stmt->closeCursor(); // Puede ser útil si el SP devuelve múltiples result sets o tiene OUT params
+                                // pero para un simple SELECT y fetch, no es estrictamente necesario.
+                                // PDO cierra el cursor automáticamente después de un fetchAll()
+                                // o cuando el statement es destruido.
     }
 
-    public function actualizarUsuario(int $userId, array $updateData): bool
-    {
+    public function actualizarUsuario(int $userId, array $updateData): bool {
         $action_code = 'U';
 
+        // Extracción de datos (sin cambios)
         $nombre = $updateData['nombre'] ?? null;
         $apellidoPaterno = $updateData['apellidoPaterno'] ?? null;
         $apellidoMaterno = $updateData['apellidoMaterno'] ?? null;
@@ -162,384 +120,235 @@ class User{
         $provincia = $updateData['provincia'] ?? null;
         $pais = $updateData['pais'] ?? null;
         $privacidad = $updateData['privacidad'] ?? null;
-        $fotoPerfil = $updateData['fotoPerfil'] ?? null; 
+        $fotoPerfil = $updateData['fotoPerfil'] ?? null;
         $fotoPerfilMime = $updateData['fotoPerfilMime'] ?? null;
-        $fotoPortada = $updateData['fotoPortada'] ?? null; 
+        $fotoPortada = $updateData['fotoPortada'] ?? null;
         $fotoPortadaMime = $updateData['fotoPortadaMime'] ?? null;
         $biografia = $updateData['biografia'] ?? null;
 
-       
+        // Parámetros no usados para 'U' en este SP
         $username = null;
         $email = null;
         $contrasenaHash = null;
 
-        
-        error_log("actualizarUsuario (ID: $userId): Iniciando actualización.");
+        error_log("actualizarUsuario (PDO - ID: $userId): Iniciando actualización.");
         if ($fotoPerfil !== null) {
-            error_log("actualizarUsuario (ID: $userId): Recibido fotoPerfil. Tamaño: " . strlen($fotoPerfil) . " bytes. MIME: " . ($fotoPerfilMime ?? 'N/A')); 
-        } else {
-             error_log("actualizarUsuario (ID: $userId): Recibido fotoPerfil como NULL.");
+            error_log("actualizarUsuario (PDO - ID: $userId): Recibido fotoPerfil. Tamaño: " . strlen($fotoPerfil) . " bytes. MIME: " . ($fotoPerfilMime ?? 'N/A'));
         }
         if ($fotoPortada !== null) {
-            error_log("actualizarUsuario (ID: $userId): Recibido fotoPortada. Tamaño: " . strlen($fotoPortada) . " bytes. MIME: " . ($fotoPortadaMime ?? 'N/A')); 
-        } else {
-             error_log("actualizarUsuario (ID: $userId): Recibido fotoPortada como NULL.");
+            error_log("actualizarUsuario (PDO - ID: $userId): Recibido fotoPortada. Tamaño: " . strlen($fotoPortada) . " bytes. MIME: " . ($fotoPortadaMime ?? 'N/A'));
         }
 
-        $stmt = null; 
+        $sql = "CALL sp_user_manager(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
         try {
-            error_log("actualizarUsuario (ID: $userId): Preparando SP 'sp_user_manager'...");
-            $stmt = $this->connection->prepare("CALL sp_user_manager(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"); 
+            $stmt = $this->connection->prepare($sql);
             if (!$stmt) {
-               
-                 error_log("actualizarUsuario (ID: $userId): Error al preparar SP: (" . $this->connection->errno . ") " . $this->connection->error);
-                 return false; 
-            }
-            error_log("actualizarUsuario (ID: $userId): SP preparado correctamente.");
-
-            $nullBlobPlaceholder = null;
-
-            error_log("actualizarUsuario (ID: $userId): Haciendo bind_param...");
-            
-            $bindSuccess = $stmt->bind_param(
-                "sisssssssssssssbsbss",
-                $action_code,       
-                $userId,            
-                $username,          
-                $nombre,            
-                $apellidoPaterno,   
-                $apellidoMaterno,   
-                $fechaNacimiento,   
-                $contrasenaHash,    
-                $email,             
-                $telefono,          
-                $genero,            
-                $ciudad,            
-                $provincia,         
-                $pais,              
-                $privacidad,        
-                $nullBlobPlaceholder, 
-                $fotoPerfilMime,    
-                $nullBlobPlaceholder, 
-                $fotoPortadaMime,   
-                $biografia          
-            );
-
-            if (!$bindSuccess) {
-                 error_log("actualizarUsuario (ID: $userId): Error al hacer bind_param: (" . $stmt->errno . ") " . $stmt->error);
-                 $stmt->close(); 
+                 // Con PDO::ERRMODE_EXCEPTION, prepare() lanzará una excepción si falla,
+                 // así que esta comprobación es redundante si las excepciones están activadas.
+                 error_log("actualizarUsuario (PDO - ID: $userId): Error al preparar SP.");
                  return false;
             }
-             error_log("actualizarUsuario (ID: $userId): bind_param exitoso.");
 
-            if ($fotoPerfil !== null) {
-                error_log("actualizarUsuario (ID: $userId): Llamando send_long_data para fotoPerfil. Índice: 15, Tamaño: " . strlen($fotoPerfil) . " bytes."); 
-                 
-                 if (!$stmt->send_long_data(15, $fotoPerfil)) {
-                    error_log("actualizarUsuario (ID: $userId): ERROR al enviar send_long_data para fotoPerfil: (" . $stmt->errno . ") " . $stmt->error);
-                    $stmt->close();
-                    return false; 
-                 }
-                 error_log("actualizarUsuario (ID: $userId): send_long_data para fotoPerfil completado.");
-            }
-
-             
-            if ($fotoPortada !== null) {
-                error_log("actualizarUsuario (ID: $userId): Llamando send_long_data para fotoPortada. Índice: 17, Tamaño: " . strlen($fotoPortada) . " bytes."); 
-                 if (!$stmt->send_long_data(17, $fotoPortada)) {
-                    error_log("actualizarUsuario (ID: $userId): ERROR al enviar send_long_data para fotoPortada: (" . $stmt->errno . ") " . $stmt->error);
-                    $stmt->close();
-                    return false; 
-                 }
-                 error_log("actualizarUsuario (ID: $userId): send_long_data para fotoPortada completado.");
-            }
-
+            // El orden debe ser exactamente el que espera el SP
+            $params = [
+                $action_code,       // 1
+                $userId,            // 2
+                $username,          // 3 (null)
+                $nombre,            // 4
+                $apellidoPaterno,   // 5
+                $apellidoMaterno,   // 6
+                $fechaNacimiento,   // 7
+                $contrasenaHash,    // 8 (null)
+                $email,             // 9 (null)
+                $telefono,          // 10
+                $genero,            // 11
+                $ciudad,            // 12
+                $provincia,         // 13
+                $pais,              // 14
+                $privacidad,        // 15
+                $fotoPerfil,        // 16 (BLOB o null)
+                $fotoPerfilMime,    // 17
+                $fotoPortada,       // 18 (BLOB o null)
+                $fotoPortadaMime,   // 19
+                $biografia          // 20
+            ];
             
-            error_log("actualizarUsuario (ID: $userId): Ejecutando SP...");
-            $success = $stmt->execute();
+            // Ya no necesitamos send_long_data. PDO lo maneja con el tipo de parámetro o por el driver.
+            // Para MySQL, pasar datos binarios directamente en el array de execute suele funcionar bien.
+            // Si los BLOBs son muy grandes y causan problemas de memoria/paquete,
+            // se podría usar bindParam con PDO::PARAM_LOB y file streams.
+            // $stmt->bindParam(16, $fotoPerfilData, PDO::PARAM_LOB); // $fotoPerfilData sería un resource stream
 
-            if (!$success) {
-                
-                 error_log("actualizarUsuario (ID: $userId): Error al ejecutar SP: (" . $stmt->errno . ") " . $stmt->error); 
-            } else {
-                 error_log("actualizarUsuario (ID: $userId): Ejecución de SP exitosa. Filas afectadas: " . $stmt->affected_rows);
-            }
+            $success = $stmt->execute($params);
 
+            error_log("actualizarUsuario (PDO - ID: $userId): Ejecución de SP " . ($success ? "exitosa" : "fallida") . ". Filas afectadas: " . $stmt->rowCount());
+            
+            // Para UPDATE, rowCount() indica el número de filas afectadas.
+            // Podrías decidir si 0 filas afectadas es un "éxito" (ej. no había nada que cambiar) o no.
+            // Por ahora, si la ejecución fue exitosa, lo consideramos éxito.
             return $success;
 
-        } catch (mysqli_sql_exception $e) {
-            
-            error_log("Excepción BBDD (mysqli_sql_exception) en actualizarUsuario (ID: $userId): " . $e->getMessage() . " (Código: " . $e->getCode() . ")\nTrace: " . $e->getTraceAsString());
-            return false; 
-        } catch (Exception $e) {
-             error_log("Excepción GENERAL en actualizarUsuario (ID: $userId): " . $e->getMessage() . "\nTrace: " . $e->getTraceAsString());
-             return false; 
-        } finally {
-             if (isset($stmt) && $stmt instanceof mysqli_stmt) {
-                $stmt->close();
-                error_log("actualizarUsuario (ID: $userId): Statement cerrado.");
-            }
+        } catch (PDOException $e) {
+            error_log("Excepción BBDD (PDOException) en actualizarUsuario (ID: $userId): " . $e->getMessage() . " (Código: " . $e->getCode() . ")");
+            return false;
         }
     }
 
-    public function actualizarContrasena(int $userId, string $newPasswordHash): bool
-    {
-        $action_code = 'P'; 
-        $nullVar = null; 
+    public function actualizarContrasena(int $userId, string $newPasswordHash): bool {
+        $action_code = 'P';
+        $nullVar = null;
 
         if (empty($userId) || empty($newPasswordHash)) {
-            error_log("actualizarContrasena: userId o newPasswordHash vacío.");
+            error_log("actualizarContrasena (PDO): userId o newPasswordHash vacío.");
             return false;
         }
 
-        $stmt = null;
+        $sql = "CALL sp_user_manager(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
         try {
-             error_log("actualizarContrasena (ID: $userId): Preparando SP 'sp_user_manager' con acción 'P'...");
-             $stmt = $this->connection->prepare("CALL sp_user_manager(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-             if (!$stmt) {
-                 error_log("actualizarContrasena (ID: $userId): Error al preparar SP: (" . $this->connection->errno . ") " . $this->connection->error);
-                 return false;
-             }
-             error_log("actualizarContrasena (ID: $userId): SP preparado correctamente.");
+            $stmt = $this->connection->prepare($sql);
+            
+            $params = [
+                $action_code, $userId, $nullVar, $nullVar, $nullVar,
+                $nullVar, $nullVar, $newPasswordHash, $nullVar, $nullVar,
+                $nullVar, $nullVar, $nullVar, $nullVar, $nullVar,
+                $nullVar, $nullVar, $nullVar, $nullVar, $nullVar
+            ];
 
-             error_log("actualizarContrasena (ID: $userId): Haciendo bind_param para acción 'P'...");
-             
-             $bindSuccess = $stmt->bind_param(
-                 "sisssssssssssssbsbss",
-                 $action_code,       
-                 $userId,            
-                 $nullVar,           
-                 $nullVar,           
-                 $nullVar,           
-                 $nullVar,           
-                 $nullVar,           
-                 $newPasswordHash,   
-                 $nullVar,           
-                 $nullVar,           
-                 $nullVar,           
-                 $nullVar,           
-                 $nullVar,           
-                 $nullVar,           
-                 $nullVar,           
-                 $nullVar,           
-                 $nullVar,           
-                 $nullVar,           
-                 $nullVar,           
-                 $nullVar            
-             );
+            $success = $stmt->execute($params);
 
-            if (!$bindSuccess) {
-                 error_log("actualizarContrasena (ID: $userId): Error al hacer bind_param: (" . $stmt->errno . ") " . $stmt->error);
-                 $stmt->close();
-                 return false;
-            }
-             error_log("actualizarContrasena (ID: $userId): bind_param exitoso.");
+            error_log("actualizarContrasena (PDO - ID: $userId): Ejecución de SP " . ($success ? "exitosa" : "fallida") . ". Filas afectadas: " . $stmt->rowCount());
+            return $success; // O $success && $stmt->rowCount() > 0 si esperas que siempre afecte una fila
 
-            error_log("actualizarContrasena (ID: $userId): Ejecutando SP...");
-            $success = $stmt->execute();
-
-            if (!$success) {
-                 error_log("actualizarContrasena (ID: $userId): Error al ejecutar SP: (" . $stmt->errno . ") " . $stmt->error);
-            } else {
-                 error_log("actualizarContrasena (ID: $userId): Ejecución de SP exitosa. Filas afectadas: " . $stmt->affected_rows);
-                 
-            }
-
-            return $success;
-
-        } catch (mysqli_sql_exception $e) {
-             error_log("Excepción BBDD (mysqli_sql_exception) en actualizarContrasena (ID: $userId): " . $e->getMessage() . " (Código: " . $e->getCode() . ")");
-             return false;
-        } catch (Exception $e) {
-             error_log("Excepción GENERAL en actualizarContrasena (ID: $userId): " . $e->getMessage());
-             return false;
-        } finally {
-             if (isset($stmt) && $stmt instanceof mysqli_stmt) {
-                $stmt->close();
-                error_log("actualizarContrasena (ID: $userId): Statement cerrado.");
-            }
+        } catch (PDOException $e) {
+            error_log("Excepción BBDD (PDOException) en actualizarContrasena (ID: $userId): " . $e->getMessage() . " (Código: " . $e->getCode() . ")");
+            return false;
         }
     }
 
-    public function obtenerPerfilUsuario(int $userId): ?array
-    {
+    public function obtenerPerfilUsuario(int $userId): ?array {
         $action_code = 'G';
-        $nullVar = null; 
+        $nullVar = null;
 
-      
-        if (!$this->connection || $this->connection->connect_error) {
-             error_log("obtenerPerfilUsuario: No hay conexión a la BBDD.");
-             return null;
-        }
+        // La comprobación de conexión es menos necesaria aquí si el constructor ya la maneja
+        // y PDO está configurado para lanzar excepciones.
+        // if (!$this->connection) { ... }
 
-        $stmt = null; 
-        $result = null; 
-        $userData = null; 
+        $sql = "CALL sp_user_manager(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $userData = null;
 
         try {
-            
-            $stmt = $this->connection->prepare("CALL sp_user_manager(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            if (!$stmt) {
-                 
-                 error_log("Error al preparar SP ('G'): " . $this->connection->error);
+            $stmt = $this->connection->prepare($sql);
+            if (!$stmt) { // Redundante con ERRMODE_EXCEPTION
+                 error_log("Error al preparar SP (PDO - 'G'): No se pudo crear el statement.");
                  return null;
             }
 
-            
-            $bindSuccess = $stmt->bind_param("sisssssssssssssbsbss",
-                $action_code,   
-                $userId,        
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar,       
-                $nullVar        
-            );
+            $params = [
+                $action_code, $userId, $nullVar, $nullVar, $nullVar,
+                $nullVar, $nullVar, $nullVar, $nullVar, $nullVar,
+                $nullVar, $nullVar, $nullVar, $nullVar, $nullVar,
+                $nullVar, $nullVar, $nullVar, $nullVar, $nullVar
+            ];
 
-             if (!$bindSuccess) {
-                 
-                 error_log("Error al vincular parámetros SP ('G'): " . $stmt->error);
-                 return null;
-             }
+            $stmt->execute($params);
+            $userData = $stmt->fetch(); // PDO::FETCH_ASSOC por defecto
 
-            $executeSuccess = $stmt->execute();
-            if (!$executeSuccess) {
-                
-                 error_log("Error al ejecutar SP ('G'): " . $stmt->error);
+            if ($userData === false) { // fetch devuelve false si no hay filas
+                 error_log("obtenerPerfilUsuario (PDO - 'G'): No se encontró usuario con ID: $userId");
                  return null;
             }
 
-            
-            $result = $stmt->get_result();
-
-            
-            if ($result && $result->num_rows === 1) {
-                $userData = $result->fetch_assoc(); 
-            } elseif ($result && $result->num_rows === 0) {
-                 
-                 error_log("obtenerPerfilUsuario ('G'): No se encontró usuario con ID: $userId");
-                 
-            } else {
-                
-                error_log("obtenerPerfilUsuario ('G'): Error al obtener resultado para ID: $userId");
-                
-            }
-
-        } catch (mysqli_sql_exception $e) {
-            
-            error_log("Excepción BBDD al obtener perfil usuario (sp_user_manager 'G', ID: $userId): " . $e->getMessage() . " (Código: " . $e->getCode() . ")");
-            
-        } catch (Exception $e) {
-            
-            error_log("Excepción general al obtener perfil usuario (ID: $userId): " . $e->getMessage());
-           
-        } finally {
-            
-            if (isset($result) && $result instanceof mysqli_result) {
-                $result->free();
-            }
-            if (isset($stmt) && $stmt instanceof mysqli_stmt) {
-                $stmt->close();
-            }
+        } catch (PDOException $e) {
+            error_log("Excepción BBDD (PDO) al obtener perfil usuario (sp_user_manager 'G', ID: $userId): " . $e->getMessage() . " (Código: " . $e->getCode() . ")");
+            return null;
         }
 
-        
         return $userData;
     }
 
+    public function searchUsers(string $searchTerm, int $currentUserId, int $limit = 10, int $offset = 0): array {
+        $sql = "CALL sp_search_users(?, ?, ?, ?, @status)"; 
+        $status = '';
 
-    //SETTERS
+        try {
+            $stmt = $this->connection->prepare($sql);
+            $stmt->bindParam(1, $searchTerm, PDO::PARAM_STR);
+            $stmt->bindParam(2, $currentUserId, PDO::PARAM_INT);
+            $stmt->bindParam(3, $limit, PDO::PARAM_INT);
+            $stmt->bindParam(4, $offset, PDO::PARAM_INT);
 
-    public function setUsername(string $username): void {
-        $this->username = $username;
+            $stmt->execute();
+            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt->closeCursor(); 
+
+            $outputStatus = $this->connection->query("SELECT @status as status")->fetch(PDO::FETCH_ASSOC);
+            $status = $outputStatus['status'] ?? 'Estado no recuperado';
+
+            if (strpos($status, 'Error') === 0) { 
+                error_log("Error desde sp_search_users: " . $status . " para término: " . $searchTerm);
+                // Podrías devolver el mensaje de error o un array vacío
+                // return ['users' => [], 'status_message' => $status];
+            }
+
+            return $users;
+
+        } catch (PDOException $e) {
+            error_log("Error BBDD (PDO) en searchUsers: " . $e->getMessage());
+            return []; 
+        }
     }
 
-    public function setNombre(string $nombre): void {
-        $this->nombre = $nombre;
+    public function getUserSuggestions(int $currentUserId, int $limit = 5): array {
+        // El SP tiene 2 IN (p_user_id_actual, p_limit) y 1 OUT (p_result_status)
+        $sql = "CALL sp_get_user_suggestions(?, ?, @status)";
+        $status = ''; // Para el OUT param
+
+        try {
+            $stmt = $this->connection->prepare($sql);
+            $stmt->bindParam(1, $currentUserId, PDO::PARAM_INT);
+            $stmt->bindParam(2, $limit, PDO::PARAM_INT);
+            
+            $stmt->execute();
+            $suggestedUsers = $stmt->fetchAll(PDO::FETCH_ASSOC); // Este es el result set principal
+            $stmt->closeCursor(); 
+
+            // Obtener el OUT parameter
+            $outputStatus = $this->connection->query("SELECT @status as status")->fetch(PDO::FETCH_ASSOC);
+            $status = $outputStatus['status'] ?? 'Estado no recuperado de sugerencias';
+
+            if (strpos($status, 'Error') === 0) {
+                error_log("Error desde sp_get_user_suggestions: " . $status . " para User ID: " . $currentUserId);
+                return []; // Devuelve vacío si el SP reportó un error
+            }
+            
+            return $suggestedUsers;
+
+        } catch (PDOException $e) {
+            error_log("Error BBDD (PDO) en getUserSuggestions para User ID $currentUserId: " . $e->getMessage());
+            return []; // Devuelve array vacío en caso de excepción
+        }
     }
 
-    public function setApellidoPaterno(string $apellidoPaterno): void {
-        $this->apellidoPaterno = $apellidoPaterno;
-    }
-
-    public function setApellidoMaterno(?string $apellidoMaterno): void {
-        $this->apellidoMaterno = $apellidoMaterno;
-    }
-
-    public function setFechaNacimiento(string $fechaNacimiento): void {
-        $this->fechaNacimiento = new DateTime($fechaNacimiento);
-    }
-
-    public function setContrasena(string $contrasena): void {
-        $this->contrasena = $contrasena;
-    }
-
-    public function setEmail(string $email): void {
-        $this->email = $email;
-    }
-
-    public function setTelefono(?string $telefono): void {
-        $this->telefono = $telefono;
-    }
-
-    public function setGenero(string $genero): void {
-        $this->genero = $genero;
-    }
-
-    public function setFechaAlta(DateTime $fechaAlta): void {
-        $this->fechaAlta = $fechaAlta;
-    }
-
-    public function setFechaBaja(?DateTime $fechaBaja): void {
-        $this->fechaBaja = $fechaBaja;
-    }
-
-    public function setCiudad(?string $ciudad): void {
-        $this->ciudad = $ciudad;
-    }
-
-    public function setProvincia(?string $provincia): void {
-        $this->provincia = $provincia;
-    }
-
-    public function setPais(?string $pais): void {
-        $this->pais = $pais;
-    }
-
-    public function setPrivacidad(string $privacidad): void {
-        $this->privacidad = $privacidad;
-    }
-
-    public function setFotoPerfil($fotoPerfil): void {
-        $this->fotoPerfil = $fotoPerfil;
-    }
-
-    public function setFotoPortada($fotoPortada): void {
-        $this->fotoPortada = $fotoPortada;
-    }
-
-    public function setBiografia(?string $biografia): void {
-        $this->biografia = $biografia;
+    public function searchUsersByNameOrUsername(string $searchTerm, string $excludeUserIdsCsv, int $limit = 10): array|false {
+        $sql = "CALL sp_search_users_for_group(:p_search_term, :p_exclude_user_ids, :p_limit)";
+        try {
+            $stmt = $this->connection->prepare($sql); // Asume $this->connection es tu conexión PDO
+            $stmt->bindParam(':p_search_term', $searchTerm, PDO::PARAM_STR);
+            $stmt->bindParam(':p_exclude_user_ids', $excludeUserIdsCsv, PDO::PARAM_STR);
+            $stmt->bindParam(':p_limit', $limit, PDO::PARAM_INT);
+            $stmt->execute();
+            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $stmt->closeCursor();
+            return $users ?: []; // Devuelve array vacío si no hay resultados
+        } catch (PDOException $e) {
+            error_log("Error BBDD (PDO) en UserModel::searchUsersByNameOrUsername: " . $e->getMessage());
+            return false;
+        }
     }
 
 
-
-
-    
+  
 }
-
-
 ?>

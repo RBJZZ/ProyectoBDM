@@ -6,6 +6,8 @@
 
 require_once __DIR__ . '/../Models/User.php';
 require_once __DIR__ . '/../Models/Post.php';
+require_once __DIR__ . '/../Models/Follow.php';
+require_once __DIR__ . '/../Models/Community.php';
 
 
 class UserController {
@@ -232,49 +234,58 @@ class UserController {
 
     //// Feed del user
     public function showFeed($base_path) {
-
-        //validar sesión
-        if (session_status() == PHP_SESSION_NONE) {
-            session_start();
-        }
-       
-        //validar login
+        if (session_status() == PHP_SESSION_NONE) { session_start(); }
         if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true || !isset($_SESSION['user_id'])) {
-            error_log("Acceso denegado a /feed: Usuario no logueado o ID no encontrado. Redirigiendo a login.");
-           
-           $this->redirectToLogin();
-           return;
-       }
+            error_log("Acceso denegado a /feed: Usuario no logueado. Redirigiendo a login.");
+            $this->redirectToLogin();
+            return;
+        }
 
         $loggedInUserId = $_SESSION['user_id'];
         error_log("Cargando feed para User ID: {$loggedInUserId}");
 
-        $userData = null;
-       
-        try {
-            $userModel = new User();
-            $userData = $userModel->obtenerPerfilUsuario($loggedInUserId);
+        $userModel = new User();
+        $postModel = new Post();
+        $followModel = new FollowModel(); 
 
-
-        } catch (Exception $e) {
-            error_log("Error al instanciar/llamar modelo User en showFeed: " . $e->getMessage());
-            http_response_code(500);
-            echo "Error al cargar los datos del usuario.";
-            return; 
-        }
+        $userData = $userModel->obtenerPerfilUsuario($loggedInUserId); 
 
         if ($userData === null) {
-            error_log("Error Crítico: No se encontraron datos para el User ID {$loggedInUserId} logueado. Forzando logout.");
-            session_unset();
-            session_destroy();
+            error_log("Error Crítico: No se encontraron datos para el User ID {$loggedInUserId} logueado en showFeed. Forzando logout.");
+            session_unset(); session_destroy();
             $_SESSION['login_error'] = "Hubo un problema con tu sesión. Por favor, inicia sesión de nuevo.";
             $this->redirectToLogin();
-            return; 
+            return;
         }
+
+        $userOwnPosts = $postModel->getUserPosts($loggedInUserId, $loggedInUserId, 0, 0, true); 
+        $publicationsCount = $userOwnPosts['total_count'] ?? 0;
+
+        $followersResult = $followModel->getFollowers($loggedInUserId, 0, 0);
+        $followersCount = $followersResult['total_count'] ?? 0;
+
+        $followingResult = $followModel->getFollowing($loggedInUserId, 0, 0);
+        $followingCount = $followingResult['total_count'] ?? 0;
+        
+
+        $feedPostsResult = $postModel->getFeedForUser($loggedInUserId, 20, 0); 
+        $feedPosts = $feedPostsResult['posts'] ?? [];
+        $feedTotalPosts = $feedPostsResult['total_count'] ?? 0; 
+
+        $suggestedUsers = $userModel->getUserSuggestions($loggedInUserId, 5); 
+
+        $communityModel = new CommunityModel();
+        $userCommunitiesResult = $communityModel->getUserJoinedCommunities($loggedInUserId, 5, 0); // Obtener hasta 5 para la barra lateral
+        $userCommunities = $userCommunitiesResult['data'] ?? [];
+
+        $pageTitle = "Mi Feed - StarNest";
 
         $viewPath = __DIR__ . '/../Views/feed.php';
         if (file_exists($viewPath)) {
-             
+            // Todas estas variables estarán disponibles en feed.php:
+            // $base_path, $userData, $publicationsCount, $followersCount, $followingCount,
+            // $feedPosts, $feedTotalPosts, $suggestedUsers, $pageTitle
+            // $userCommunities (si la implementas)
             include $viewPath;
         } else {
             error_log("Error Crítico: No se encontró la vista feed.php en " . $viewPath);
@@ -284,45 +295,172 @@ class UserController {
     }
 
     //// Perfil del usuario
-    public function showMyProfile($base_path) {
+    public function showUserProfile($base_path, $profileUserId) {
+        if (session_status() == PHP_SESSION_NONE) { session_start(); }
+
+        $profileUserId = (int)$profileUserId;
+        $loggedInUserId = $_SESSION['user_id'] ?? null;
+
+        // Si el ID del perfil solicitado es el mismo que el del usuario logueado,
+        // simplemente redirigir a su vista de "Mi Perfil" para evitar duplicar lógica
+        // o para mantener una URL canónica para el perfil propio.
+        if ($loggedInUserId && $profileUserId === $loggedInUserId) {
+            // error_log("showUserProfile: ID solicitado ($profileUserId) es el mismo que el logueado. Redirigiendo a showMyProfile.");
+            $this->showMyProfile($base_path);
+            return;
+        }
+
+        error_log("Cargando perfil para User ID (visitado): {$profileUserId}. Usuario logueado: " . ($loggedInUserId ?? 'Ninguno'));
+
+        $userModel = new User();
+        $postModel = new Post();
+        $followModel = new FollowModel(); // Instanciar FollowModel
+
+        $userData = $userModel->obtenerPerfilUsuario($profileUserId); // Obtiene datos del perfil VISITADO
+
+        if ($userData === null || $userData['usr_fecha_baja'] !== null) {
+            error_log("Error: No se encontró usuario activo con ID {$profileUserId} o está dado de baja.");
+            http_response_code(404);
+            // Considera cargar una vista de error 404 más amigable
+            if (file_exists(__DIR__ . '/../Views/errors/404_user_not_found.php')) {
+                include __DIR__ . '/../Views/errors/404_user_not_found.php';
+            } else {
+                echo "Usuario no encontrado o no disponible.";
+            }
+            return;
+        }
+
+        // Obtener publicaciones del usuario del perfil VISITADO
+        // El segundo parámetro de getUserPosts es el ID del usuario cuyas publicaciones quieres ver.
+        // El tercer parámetro es el ID del usuario actual (logueado), para determinar likes, etc.
+        $userPosts = $postModel->getUserPosts($profileUserId, $loggedInUserId, 20, 0); 
+        error_log("Se obtuvieron " . count($userPosts) . " posts para el perfil del User ID (visitado): {$profileUserId}");
+
+        $isFollowing = false;
+        $followersCount = 0;
+        $followingCount = 0;
+
+        // Verificar si el usuario logueado sigue al usuario del perfil visitado
+        if ($loggedInUserId) {
+            $followCheckResult = $followModel->checkFollowing($loggedInUserId, $profileUserId);
+            $isFollowing = $followCheckResult['is_following'];
+            error_log("Usuario logueado ($loggedInUserId) sigue a ($profileUserId)? " . ($isFollowing ? 'Sí' : 'No') . ". Status: " . $followCheckResult['status']);
+        }
+
+        // Obtener contadores de seguidores y seguidos para el perfil VISITADO
+        $followersResult = $followModel->getFollowers($profileUserId, 0, 0); // Limit 0 para solo obtener el conteo
+        if (isset($followersResult['total_count'])) {
+            $followersCount = $followersResult['total_count'];
+        } else {
+            error_log("No se pudo obtener el conteo de seguidores para el usuario {$profileUserId}. Respuesta: " . json_encode($followersResult));
+        }
+
+
+        $followingResult = $followModel->getFollowing($profileUserId, 0, 0); // Limit 0 para solo obtener el conteo
+         if (isset($followingResult['total_count'])) {
+            $followingCount = $followingResult['total_count'];
+        } else {
+            error_log("No se pudo obtener el conteo de seguidos para el usuario {$profileUserId}. Respuesta: " . json_encode($followingResult));
+        }
         
+        error_log("Perfil Visitado ID {$profileUserId}: Seguidores: {$followersCount}, Siguiendo: {$followingCount}");
+
+
+        $viewerId = $loggedInUserId; 
+        $userMediaForGrid = []; 
+        if (method_exists($postModel, 'getUserMediaForGrid')) { 
+            $userMediaForGrid = $postModel->getUserMediaForGrid($profileUserId, $viewerId, 9); 
+            error_log("UserController::showUserProfile - User ID: $profileUserId, Viewer ID: " . ($viewerId ?? 'NULL') . ", Media for Grid Count: " . count($userMediaForGrid));
+        } else {
+            error_log("UserController::showUserProfile - ADVERTENCIA: El método getUserMediaForGrid no existe en PostModel.");
+        }
+
+        $followersPreview = []; 
+        if (method_exists($followModel, 'getFollowersPreview')) { 
+            $followersPreview = $followModel->getFollowersPreview($profileUserId, 5); 
+            error_log("UserController::showUserProfile - User ID: $profileUserId, Followers Preview Count: " . count($followersPreview));
+        } else {
+            error_log("UserController::showUserProfile - ADVERTENCIA: El método getFollowersPreview no existe en FollowModel.");
+        }
+
+        $isOwnProfile = ($loggedInUserId === $profileUserId);
+
+        $pageTitle = htmlspecialchars($userData['usr_nombre'] . " " . $userData['usr_apellido_paterno']) . " (@" . htmlspecialchars($userData['usr_username']) . ")";
+
+        // La vista userprofile.php se reutilizará.
+        // Necesitará lógica para mostrar/ocultar botones de "Editar Perfil" vs "Seguir/Dejar de Seguir"
+        // y para usar $userData, $userPosts, $isFollowing, $isOwnProfile, $followersCount, $followingCount.
+        $viewPath = __DIR__ . '/../Views/userprofile.php'; 
+        if (file_exists($viewPath)) {
+            include $viewPath;
+        } else {
+            error_log("Error Crítico: No se encontró la vista userprofile.php en " . $viewPath);
+            http_response_code(500);
+            echo "Error interno al cargar el perfil.";
+        }
+    }
+
+    public function showMyProfile($base_path) {
         if (session_status() == PHP_SESSION_NONE) { session_start(); }
         if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true || !isset($_SESSION['user_id'])) {
-            error_log("Acceso denegado a /profile: Usuario no logueado o ID no encontrado. Redirigiendo a login.");
-            $this->redirectToLogin();
+            error_log("Acceso denegado a /profile: Usuario no logueado. Redirigiendo a login.");
+            $this->redirectToLogin(); // Asumiendo que tienes este método auxiliar
             return;
         }
 
         $loggedInUserId = $_SESSION['user_id'];
-        error_log("Cargando perfil para User ID: {$loggedInUserId}");
-
-        $userData = null;
-        try {
-            $userModel = new User();
-            $postModel = new Post();
-            $userData = $userModel->obtenerPerfilUsuario($loggedInUserId);
-            $userPosts=$postModel->getUserPosts($loggedInUserId, $loggedInUserId, 20, 0);
-
-            error_log("Se obtuvieron " . count($userPosts) . " posts para el perfil del User ID: {$loggedInUserId} via SP");
-        } catch (Exception $e) {
-            error_log("Error al instanciar/llamar modelo User en showMyProfile: " . $e->getMessage());
-            http_response_code(500);
-            echo "Error al cargar los datos del perfil.";
-            // $_SESSION['profile_error'] = "No se pudo cargar tu perfil.";
-            // header('Location: ' . $base_path . 'feed'); exit();
-            return;
-        }
-
+        error_log("Cargando MI perfil para User ID: {$loggedInUserId}");
         
+        $userModel = new User();
+        $postModel = new Post();
+        $followModel = new FollowModel();
+
+        $userData = $userModel->obtenerPerfilUsuario($loggedInUserId);
+
         if ($userData === null) {
-            error_log("Error Crítico: No se encontraron datos para el User ID {$loggedInUserId} logueado en showMyProfile. Forzando logout.");
+            error_log("Error Crítico: No se encontraron datos para MI User ID {$loggedInUserId}. Forzando logout.");
             session_unset(); session_destroy();
             $_SESSION['login_error'] = "Hubo un problema con tu sesión. Por favor, inicia sesión de nuevo.";
             $this->redirectToLogin();
             return;
         }
 
+        // Publicaciones PROPIAS, vistas por el PROPIO usuario
+        $userPosts = $postModel->getUserPosts($loggedInUserId, $loggedInUserId, 20, 0);
+        error_log("Se obtuvieron " . count($userPosts) . " posts para MI perfil (ID: {$loggedInUserId})");
+
+
+        $isOwnProfile = true; // Siempre es el perfil propio aquí
+        $isFollowing = false; // No te sigues a ti mismo en este contexto
+
+        // Contadores para el perfil PROPIO
+        $followersResult = $followModel->getFollowers($loggedInUserId, 0, 0);
+        $followersCount = $followersResult['total_count'] ?? 0;
+
+        $followingResult = $followModel->getFollowing($loggedInUserId, 0, 0);
+        $followingCount = $followingResult['total_count'] ?? 0;
+
+        error_log("Mi Perfil ID {$loggedInUserId}: Seguidores: {$followersCount}, Siguiendo: {$followingCount}");
         
+        $viewerId = $loggedInUserId; 
+        $userMediaForGrid = []; 
+        if (method_exists($postModel, 'getUserMediaForGrid')) { 
+            $userMediaForGrid = $postModel->getUserMediaForGrid($loggedInUserId, $viewerId, 9);
+            error_log("UserController::showMyProfile - User ID: $loggedInUserId, Media for Grid Count: " . count($userMediaForGrid));
+        } else {
+            error_log("UserController::showMyProfile - ADVERTENCIA: El método getUserMediaForGrid no existe en PostModel.");
+        }
+
+        $followersPreview = []; 
+        if (method_exists($followModel, 'getFollowersPreview')) { 
+            $followersPreview = $followModel->getFollowersPreview($loggedInUserId, 5); 
+            error_log("UserController::showMyProfile - User ID: $loggedInUserId, Followers Preview Count: " . count($followersPreview));
+        } else {
+            error_log("UserController::showMyProfile - ADVERTENCIA: El método getFollowersPreview no existe en FollowModel.");
+        }
+
+        $pageTitle = "Mi Perfil - " . htmlspecialchars($userData['usr_username']);
+
         $viewPath = __DIR__ . '/../Views/userprofile.php'; 
         if (file_exists($viewPath)) {
             include $viewPath;
@@ -655,6 +793,67 @@ class UserController {
         }
         header('Location: ' . $base_path . 'login');
         exit(); 
+    }
+
+    public function searchUsersForGroupApi() {
+
+        
+
+        header('Content-Type: application/json');
+        if (!isset($_SESSION['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'message' => 'No autorizado.']);
+            return;
+        }
+        $currentUserId = (int)$_SESSION['user_id'];
+        $searchTerm = isset($_GET['term']) ? trim($_GET['term']) : '';
+        // Lista de IDs de usuarios ya seleccionados para el grupo (el JS la enviará)
+        $alreadySelectedIds = [];
+        if (isset($_GET['exclude_ids']) && !empty($_GET['exclude_ids'])) {
+            $alreadySelectedIds = array_map('intval', explode(',', $_GET['exclude_ids']));
+        }
+
+
+        if (strlen($searchTerm) < 1 && empty($alreadySelectedIds)) { // O < 2 o 3 para no buscar con muy poco
+            echo json_encode(['success' => true, 'users' => []]); // No buscar si el término es muy corto
+            return;
+        }
+
+        // Excluir siempre al usuario actual
+        if (!in_array($currentUserId, $alreadySelectedIds)) {
+            $alreadySelectedIds = $currentUserId;
+        }
+
+        // Necesitarás un método en UserModel que busque usuarios por término,
+        // y que pueda excluir una lista de IDs.
+        // Podrías modificar tu SP `sp_search_users` o crear uno nuevo.
+        // Por ahora, asumimos que tienes un método en UserModel
+        $userModel=new User();
+        $usersFound = $userModel->searchUsersByNameOrUsername($searchTerm, $alreadySelectedIds, 10);
+
+        if ($usersFound !== false) {
+            // Formatear para el JS (solo necesitamos ID, username, nombre, foto)
+            $formattedUsers = [];
+            foreach ($usersFound as $user) {
+                $profilePic = null;
+                if (!empty($user['usr_foto_perfil']) && !empty($user['usr_foto_perfil_mime'])) {
+                    $profilePic = 'data:' . $user['usr_foto_perfil_mime'] . ';base64,' . base64_encode($user['usr_foto_perfil']);
+                } else {
+                    // Asumiendo que $this->base_path está disponible o tienes una forma de obtenerlo
+                    $profilePic = ($this->base_path ?? '/ProyectoBDM/') . 'Views/pictures/defaultpfp.jpg';
+                }
+                $formattedUsers[] = [
+                    'user_id' => $user['usr_id'],
+                    'username' => $user['usr_username'],
+                    'full_name' => trim(($user['usr_nombre'] ?? '') . ' ' . ($user['usr_apellido_paterno'] ?? '')),
+                    'profile_pic_url' => $profilePic
+                ];
+            }
+            echo json_encode(['success' => true, 'users' => $formattedUsers]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Error al buscar usuarios.']);
+        }
     }
 
 }

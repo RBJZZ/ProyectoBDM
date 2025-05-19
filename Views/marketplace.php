@@ -8,8 +8,6 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     exit();
 }
 
-
-
 $username = $userData['usr_username'] ?? 'Usuario';
 $nombreCompleto = ($userData['usr_nombre'] ?? '') . ' ' . ($userData['usr_apellido_paterno'] ?? '');
 $nombre = $userData['usr_nombre'] ?? 'Nombre'; 
@@ -55,11 +53,7 @@ if ($coverPicData && $coverPicMime) {
     $coverPicSrc = htmlspecialchars($base_path) . 'Views/pictures/defaultcover.jpg';
 }
 
-
-
 ?>
-
-
 
 <!DOCTYPE html>
 <html lang="es">
@@ -90,24 +84,20 @@ if ($coverPicData && $coverPicMime) {
 
            
             <div class="list-group">
-                <a href="#" class="list-group-item list-group-item-action border-0">
+                <a href="<?php echo htmlspecialchars($base_path) ?>marketplace" 
+                class="list-group-item list-group-item-action border-0 <?php echo !isset($_GET['category']) ? 'active-filter' : ''; ?>">
                     <i class="bi bi-house-door me-2"></i>Todas las categorías
                 </a>
-                <a href="#" class="list-group-item list-group-item-action border-0">
-                    <i class="bi bi-phone me-2"></i>Electrónica
-                </a>
-                <a href="#" class="list-group-item list-group-item-action border-0">
-                    <i class="bi bi-shop me-2"></i>Negocios Locales
-                </a>
-                <a href="#" class="list-group-item list-group-item-action border-0">
-                    <i class="bi bi-car-front me-2"></i>Vehículos
-                </a>
-                <a href="#" class="list-group-item list-group-item-action border-0">
-                    <i class="bi bi-house-heart me-2"></i>Hogar
-                </a>
-                <a href="#" class="list-group-item list-group-item-action border-0">
-                    <i class="bi bi-bag me-2"></i>Moda
-                </a>
+                <?php if (isset($categories) && !empty($categories)): ?>
+                    <?php foreach ($categories as $category): ?>
+                        <a href="<?php echo htmlspecialchars($base_path) ?>marketplace?category=<?php echo (int)$category['tag_id']; ?>"
+                        class="list-group-item list-group-item-action border-0 <?php echo (isset($_GET['category']) && $_GET['category'] == $category['tag_id']) ? 'active-filter' : ''; ?>">
+                            <i class="bi bi-tag me-2"></i><?php echo htmlspecialchars($category['tag_nombre']); ?>
+                        </a>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <p class="text-muted p-2">No hay categorías disponibles.</p>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -115,211 +105,56 @@ if ($coverPicData && $coverPicMime) {
         <div class="col-md-9 p-4">
             <div class="row">
                 
-                <div class="col-lg-3 col-sm-2 mb-3">
-                    <div class="card h-100 shadow-sm">
-                        <a href="./product.html"><img src="<?php echo htmlspecialchars($base_path);?>views/pictures/thumb2.jpg" class="card-img-top object-fit-cover" style="height: 200px;"></a>
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h5 class="card-title mb-0">iPhone 15 Pro Max</h5>
-                                <i class="bi bi-tag"></i>
-                            </div>
-                            <p class=" fw-bold mt-2">$1,299.99</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small>Electrónica</small>
-                                <button class="btn btn-sm btn-custom">Ver Detalles</button>
+            <?php if (isset($products) && !empty($products)): ?>
+                    <?php foreach ($products as $product): ?>
+                        <?php
+                            // Preparar datos para la tarjeta
+                            $productId = $product['prd_id_producto'];
+                            $productName = htmlspecialchars($product['prd_nombre_producto']);
+                            $productPrice = number_format((float)($product['prd_precio'] ?? 0), 2, '.', ','); // Formatear precio
+                            $categoryName = htmlspecialchars($product['tag_nombre'] ?? 'Sin categoría');
+                            $firstMediaId = $product['first_media_id'] ?? null;
+                            $detailUrl = htmlspecialchars($base_path) . 'product/' . $productId;
+
+                            // Construir URL de la imagen (o placeholder)
+                            $imageUrl = htmlspecialchars($base_path) . 'Views/pictures/placeholder.png'; // Imagen por defecto
+                            if ($firstMediaId !== null) {
+                                $imageUrl = htmlspecialchars($base_path) . 'get_product_media.php?id=' . $firstMediaId;
+                            }
+                        ?>
+                        <div class="col-lg-3 col-md-4 col-sm-6 mb-4"> <!-- Ajuste de columnas para responsividad -->
+                            <div class="card h-100 shadow-sm product-card">
+                                <!-- Enlace en la imagen y en el botón -->
+                                <a href="<?php echo $detailUrl; ?>">
+                                    <img src="<?php echo $imageUrl; ?>" class="card-img-top object-fit-cover" style="height: 200px;" alt="<?php echo $productName; ?>">
+                                </a>
+                                <div class="card-body d-flex flex-column"> <!-- Flex column para empujar botón abajo -->
+                                   <div class="d-flex justify-content-between align-items-center">
+                                        <h5 class="card-title mb-0 fw-bold fs-6"><?php echo $productName; ?></h5>
+                                        <button class="btn btn-sm btn-outline-danger favorite-toggle-btn p-1" 
+                                                data-product-id="<?php echo $productId; ?>"
+                                                data-is-favorite="<?php echo ($product['is_favorited_by_current_user'] ?? 'false') === 'true' || ($product['is_favorited_by_current_user'] ?? 0) === 1 ? 'true' : 'false'; ?>"
+                                                title="<?php echo (($product['is_favorited_by_current_user'] ?? 'false') === 'true' || ($product['is_favorited_by_current_user'] ?? 0) === 1) ? 'Quitar de favoritos' : 'Añadir a favoritos'; ?>">
+                                            <i class="bi <?php echo (($product['is_favorited_by_current_user'] ?? 'false') === 'true' || ($product['is_favorited_by_current_user'] ?? 0) === 1) ? 'bi-heart-fill text-danger' : 'bi-heart'; ?>"></i>
+                                            </button>
+                                    </div>
+                                    <p class="fw-bold mt-2 mb-2">$<?php echo $productPrice; ?></p>
+                                    <div class="mt-auto"> <!-- Empujar esto al fondo -->
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted"><?php echo $categoryName; ?></small>
+                                            <a href="<?php echo $detailUrl; ?>" class="btn btn-sm btn-custom">Ver Detalles</a>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="col-12">
+                        <p class="text-center text-muted mt-5">No hay productos disponibles en este momento.</p>
                     </div>
-                </div>
+                <?php endif; ?>
 
-                
-                <div class="col-lg-3 col-sm-2 mb-3">
-                    <div class="card h-100 shadow-sm">
-                        <img src="<?php echo htmlspecialchars($base_path);?>views/pictures/thumb1.jpg" class="card-img-top object-fit-cover" style="height: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h5 class="card-title mb-0">Sofá Chesterfield</h5>
-                                <i class="bi bi-tag"></i>
-                            </div>
-                            <p class=" fw-bold mt-2">$850.00</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small>Hogar</small>
-                                <button class="btn btn-sm btn-custom">Ver Detalles</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-sm-2 mb-3">
-                    <div class="card h-100 shadow-sm">
-                        <img src="<?php echo htmlspecialchars($base_path);?>views/pictures/thumb3.jpg" class="card-img-top object-fit-cover" style="height: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h5 class="card-title mb-0">Sofá Chesterfield</h5>
-                                <i class="bi bi-tag"></i>
-                            </div>
-                            <p class=" fw-bold mt-2">$850.00</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small>Hogar</small>
-                                <button class="btn btn-sm btn-custom">Ver Detalles</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-
-                <div class="col-lg-3 col-sm-2 mb-3">
-                    <div class="card h-100 shadow-sm">
-                        <img src="<?php echo htmlspecialchars($base_path);?>views/pictures/thumb2.jpg" class="card-img-top object-fit-cover" style="height: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h5 class="card-title mb-0">Sofá Chesterfield</h5>
-                                <i class="bi bi-tag"></i>
-                            </div>
-                            <p class=" fw-bold mt-2">$850.00</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small>Hogar</small>
-                                <button class="btn btn-sm btn-custom">Ver Detalles</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-sm-2 mb-3">
-                    <div class="card h-100 shadow-sm">
-                        <img src="<?php echo htmlspecialchars($base_path);?>views/pictures/thumb3.jpg" class="card-img-top object-fit-cover" style="height: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h5 class="card-title mb-0">Sofá Chesterfield</h5>
-                                <i class="bi bi-tag"></i>
-                            </div>
-                            <p class=" fw-bold mt-2">$850.00</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small>Hogar</small>
-                                <button class="btn btn-sm btn-custom">Ver Detalles</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-sm-2 mb-3">
-                    <div class="card h-100 shadow-sm">
-                        <img src="<?php echo htmlspecialchars($base_path);?>views/pictures/thumb1.jpg" class="card-img-top object-fit-cover" style="height: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h5 class="card-title mb-0">Sofá Chesterfield</h5>
-                                <i class="bi bi-tag"></i>
-                            </div>
-                            <p class=" fw-bold mt-2">$850.00</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small>Hogar</small>
-                                <button class="btn btn-sm btn-custom">Ver Detalles</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-sm-2 mb-3">
-                    <div class="card h-100 shadow-sm">
-                        <img src="<?php echo htmlspecialchars($base_path);?>views/pictures/thumb2.jpg" class="card-img-top object-fit-cover" style="height: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h5 class="card-title mb-0">Sofá Chesterfield</h5>
-                                <i class="bi bi-tag"></i>
-                            </div>
-                            <p class=" fw-bold mt-2">$850.00</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small>Hogar</small>
-                                <button class="btn btn-sm btn-custom">Ver Detalles</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-sm-2 mb-3">
-                    <div class="card h-100 shadow-sm">
-                        <img src="<?php echo htmlspecialchars($base_path);?>views/pictures/thumb3.jpg" class="card-img-top object-fit-cover" style="height: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h5 class="card-title mb-0">Sofá Chesterfield</h5>
-                                <i class="bi bi-tag"></i>
-                            </div>
-                            <p class=" fw-bold mt-2">$850.00</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small>Hogar</small>
-                                <button class="btn btn-sm btn-custom">Ver Detalles</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-sm-2 mb-3">
-                    <div class="card h-100 shadow-sm">
-                        <img src="<?php echo htmlspecialchars($base_path);?>views/pictures/thumb3.jpg" class="card-img-top object-fit-cover" style="height: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h5 class="card-title mb-0">Sofá Chesterfield</h5>
-                                <i class="bi bi-tag"></i>
-                            </div>
-                            <p class=" fw-bold mt-2">$850.00</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small>Hogar</small>
-                                <button class="btn btn-sm btn-custom">Ver Detalles</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-sm-2 mb-3">
-                    <div class="card h-100 shadow-sm">
-                        <img src="<?php echo htmlspecialchars($base_path);?>views/pictures/thumb1.jpg" class="card-img-top object-fit-cover" style="height: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h5 class="card-title mb-0">Sofá Chesterfield</h5>
-                                <i class="bi bi-tag"></i>
-                            </div>
-                            <p class=" fw-bold mt-2">$850.00</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small>Hogar</small>
-                                <button class="btn btn-sm btn-custom">Ver Detalles</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-sm-2 mb-3">
-                    <div class="card h-100 shadow-sm">
-                        <img src="<?php echo htmlspecialchars($base_path);?>views/pictures/thumb2.jpg" class="card-img-top object-fit-cover" style="height: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h5 class="card-title mb-0">Sofá Chesterfield</h5>
-                                <i class="bi bi-tag"></i>
-                            </div>
-                            <p class=" fw-bold mt-2">$850.00</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small>Hogar</small>
-                                <button class="btn btn-sm btn-custom">Ver Detalles</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-3 col-sm-2 mb-3">
-                    <div class="card h-100 shadow-sm">
-                        <img src="<?php echo htmlspecialchars($base_path);?>views/pictures/thumb3.jpg" class="card-img-top object-fit-cover" style="height: 200px;">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <h5 class="card-title mb-0">Sofá Chesterfield</h5>
-                                <i class="bi bi-tag"></i>
-                            </div>
-                            <p class=" fw-bold mt-2">$850.00</p>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <small>Hogar</small>
-                                <button class="btn btn-sm btn-custom">Ver Detalles</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
                 
             </div>
         </div>
@@ -354,6 +189,8 @@ if ($coverPicData && $coverPicMime) {
         window.basePath = <?php echo json_encode($base_path); ?>;
         console.log("currentUserData definido:", window.currentUserData);
     </script>
+
+<script src="<?php echo htmlspecialchars($base_path)?>Views/js/product.js"></script>
 <script src="<?php echo htmlspecialchars($base_path)?>Views/js/validation.js"></script>
 <script src="<?php echo htmlspecialchars($base_path);?>Views/js/modal.js"></script>
 <script src="<?php echo htmlspecialchars($base_path);?>Views/js/main.js"></script>

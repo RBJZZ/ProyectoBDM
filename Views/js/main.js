@@ -31,17 +31,71 @@ function loadTheme() {
 }
 
 
+
+
 document.addEventListener("DOMContentLoaded", function() {
 
-    loadTheme(); // Cargar tema primero
+    const baseUri = document.documentElement.getAttribute('data-base-uri') || '/ProyectoBDM/';
+
+    document.body.addEventListener('click', async function(event) {
+        const startChatButton = event.target.closest('.btn-start-chat'); // Busca el botón por su clase
+
+        if (startChatButton) {
+            event.preventDefault();
+            const targetUserId = startChatButton.dataset.userId; // Obtiene el ID del data-attribute
+
+            if (!targetUserId) {
+                alert('No se pudo identificar al usuario para iniciar el chat.');
+                return;
+            }
+
+            // (Opcional) Feedback visual mientras se procesa
+            startChatButton.disabled = true;
+            const originalButtonText = startChatButton.innerHTML;
+            startChatButton.innerHTML = `
+                <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                Iniciando...`;
+
+            try {
+                const response = await fetch(`${baseUri}chat/individual/create_or_get`, { // Ruta al endpoint del ChatController
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ target_user_id: parseInt(targetUserId) })
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.chat_id) {
+                    console.log(`Chat ID: ${result.chat_id}, Es nuevo: ${result.is_new}`);
+                    // Redirigir a la página de chat, pasando el chat_id para activarlo
+                    window.location.href = `${baseUri}chat?activate_chat_id=${result.chat_id}`;
+                } else {
+                    alert(`Error al iniciar chat: ${result.message || 'No se pudo iniciar el chat.'}`);
+                    startChatButton.disabled = false;
+                    startChatButton.innerHTML = originalButtonText;
+                }
+
+            } catch (error) {
+                console.error("Excepción al iniciar chat:", error);
+                alert("Error de conexión al intentar iniciar el chat.");
+                startChatButton.disabled = false;
+                startChatButton.innerHTML = originalButtonText;
+            }
+        }
+    });
+    
+
+    loadTheme(); 
 
     const navbarContainer = document.getElementById("navbar-container");
     if (!navbarContainer) {
         console.error("Error: Contenedor #navbar-container no encontrado.");
-        return; // Salir si no hay contenedor
+        return; 
     }
 
-    // --- Usar window.basePath definido globalmente (asegúrate que exista) ---
     const basePath = window.basePath || '/ProyectoBDM/';
     // -----------------------------------------------------------------------
 
@@ -52,7 +106,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 <a class="navbar-brand logo fw-bold ms-2" href="${basePath}feed"><span><i class="bi bi-stars"></i></span> StarNest</a>
 
                 <div class="d-flex flex-grow-1 mx-4">
-                    <!-- Envolver input y botón en un form para búsqueda GET -->
                     <form action="${basePath}search" method="GET" class="input-group w-100">
                         <input type="search" id="searchInputNavbar" name="query" class="form-control border" placeholder="Buscar...">
                         <button class="btn btn-custom border" id="btnsearchNavbar" type="submit">
@@ -87,6 +140,10 @@ document.addEventListener("DOMContentLoaded", function() {
                             <i class="bi bi-people fs-5"></i>
                         </a>
 
+                          <a href="${basePath}shorts" class="text-dark mx-3" title="Shorts">
+                            <i class="bi bi-camera-reels fs-5"></i>
+                        </a>
+
                         <a href="${basePath}profile" class="text-dark mx-3" title="Perfil">
                             <i class="bi bi-person-circle fs-5"></i>
                         </a>
@@ -109,11 +166,6 @@ document.addEventListener("DOMContentLoaded", function() {
         </button>
     `;
 
-    // El listener para el botón de búsqueda ya no es necesario aquí,
-    // porque ahora es un botón type="submit" dentro de un <form method="GET">.
-    // El navegador se encargará de navegar a /search?query=lo_escrito
-
-    // Asegúrate de que el botón de tema existe si tu HTML no lo incluye estáticamente
     const themeToggleButton = document.getElementById("theme-toggle-btn");
      if (!themeToggleButton) {
          console.warn("Botón #theme-toggle-btn no encontrado. La funcionalidad de cambio de tema podría no estar visible.");

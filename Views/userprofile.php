@@ -1,12 +1,22 @@
 <?php
 
 if (session_status() == PHP_SESSION_NONE) { session_start(); }
-if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-    global $base_path;
-    if(!isset($base_path)) $base_path = '/ProyectoBDM/';
-    header('Location: ' . $base_path . 'login');
-    exit();
+
+// Verifica si el usuario está logueado para tomar decisiones en la vista
+$loggedInUserId = $_SESSION['user_id'] ?? null;
+
+// Si $userData no está definida o está vacía (no debería pasar si el controlador funciona bien),
+// podrías redirigir o mostrar un error más genérico aquí para evitar errores de PHP más abajo.
+if (!isset($userData) || empty($userData)) {
+    // Esto es una salvaguarda, el controlador debería haber manejado el usuario no encontrado.
+    echo "Error: No se pudieron cargar los datos del perfil.";
+    // Podrías incluir una vista de error o redirigir.
+    exit;
 }
+
+
+$profileUserID = $userData['usr_id'] ?? null;
+
 
 
 $username = $userData['usr_username'] ?? 'Usuario';
@@ -57,7 +67,7 @@ if ($coverPicData && $coverPicMime) {
 ?>
 
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-base-uri="<?php echo htmlspecialchars($base_path); ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -84,22 +94,33 @@ if ($coverPicData && $coverPicMime) {
                     </div>
                     <img src="<?php echo htmlspecialchars($profilePicSrc);?>" class="mt-5 profile-img rounded-circle" id="currentAvatar">
                     <div class="card-body text-center pt-5">
-                        <h2 class="card-title mt-5 pt-3"><?php echo htmlspecialchars($nombreCompleto)?></h2>
-                        <div class="d-flex justify-content-around my-4">
+                        <h2 class="card-title mt-5 pt-3"><?php echo htmlspecialchars($nombreCompleto); ?></h2>
+                        <small class="text-muted d-block mb-3">@<?php echo htmlspecialchars($username); ?></small> <div class="d-flex justify-content-around my-4">
                             <div>
-                                <h5>1.2k</h5>
-                                <span >Publicaciones</span>
+                                <h5><?php echo count($userPosts); ?></h5> 
+                                <span>Publicaciones</span>
                             </div>
                             <div>
-                                <h5>15.8k</h5>
-                                <span >Seguidores</span>
+                                <h5 id="followers-count-display"><?php echo htmlspecialchars($followersCount); ?></h5> 
+                                <span>Seguidores</span>
                             </div>
                             <div>
-                                <h5>856</h5>
-                                <span >Siguiendo</span>
+                                <h5 id="following-count-display"><?php echo htmlspecialchars($followingCount); ?></h5>
+                                <span>Siguiendo</span>
                             </div>
                         </div>
-                        <button class="btn btn-custom rounded-pill mb-2"><span><i class="bi bi-person-fill-add"></i></span> Seguir</button>
+                        <?php if(isset($isOwnProfile) && !$isOwnProfile):?>
+                        <button 
+                            class="btn btn-custom rounded-pill mb-2 ms-md-2 follow-button" 
+                            data-user-id-target="<?php echo htmlspecialchars($profileUserID); ?>" data-action="<?php echo ($isFollowing ?? false) ? 'unfollow' : 'follow'; ?>"
+                            style="min-width: 120px;">
+                            <i class="bi <?php echo ($isFollowing ?? false) ? 'bi-person-check-fill' : 'bi-person-plus-fill'; ?>"></i>
+                            <span class="follow-text button-text"><?php echo ($isFollowing ?? false) ? 'Siguiendo' : 'Seguir'; ?></span> </button>
+                        <button class="btn btn-custom rounded-pill mb-2 ms-0 btn-start-chat" data-user-id="<?php echo htmlspecialchars($profileUserID); ?>" style="Width: 125px;"><span><i class="bi bi-chat-dots-fill"></i></span> Mensaje</button>
+
+                        <?php endif;?>
+
+                        <?php if(isset($isOwnProfile) && $isOwnProfile):?>
                         <button class="btn btn-custom rounded-pill mb-2" 
                                 data-bs-toggle="modal" 
                                 data-bs-target="#settingsModal">
@@ -111,9 +132,15 @@ if ($coverPicData && $coverPicMime) {
                             <i class="bi bi-key-fill"></i>
                         </button>
 
-                        <button onclick="showInsightsModal()" class="btn btn-custom rounded-pill mb-2">
+                        <button class="btn btn-custom rounded-pill mb-2"
+                                data-bs-toggle="modal"
+                                data-bs-target="#starnestInsightsModal"
+                                data-user-id="<?php echo htmlspecialchars($profileUserID);?>">
                             <i class="bi bi-graph-up"></i> Ver Insights
                         </button>
+
+
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -139,58 +166,70 @@ if ($coverPicData && $coverPicMime) {
                     
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="card-title">Amigos <span class="badge">258</span></h5>
-                            <ul class="list-group list-group-flush">
-                               
-                                <li class="list-group-item d-flex align-items-center">
-                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/fuyu.jpg" class="rounded-circle me-2" width="40" height="40">
-                                    <span class="flex-grow-1">Fuyusito</span>
-                                    <button class="btn btn-sm btn-custom rounded-pill">Añadir</button>
-                                </li>
-                               
-                            </ul>
-                        </div>
-                    </div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="card-title mb-0">Seguidores</h5>
+                    <?php // $followersCount ya lo tienes disponible desde el controlador ?>
+                    <span class="badge bg-secondary rounded-pill"><?php echo htmlspecialchars($followersCount); ?></span>
                 </div>
-        <!--
-                <div class="col-md-6">
-                   
-                    <div class="card mb-3">
-                        <div class="card-body">
 
-                            <div class="container-fluid pt-2">
-                                <div class="row  p-2">
-                                    <div class="col-1">
-                                        <img src="<?php echo htmlspecialchars($profilePicSrc)?>" class="rounded-circle" style="width: 50px;" alt="profile picture">
+                <?php if (!empty($followersPreview)): ?>
+                    <ul class="list-group list-group-flush">
+                        <?php foreach ($followersPreview as $follower): ?>
+                            <?php
+                                $followerProfilePicSrc = null;
+                                if (!empty($follower['usr_foto_perfil']) && !empty($follower['usr_foto_perfil_mime'])) {
+                                    $followerProfilePicSrc = 'data:' . htmlspecialchars($follower['usr_foto_perfil_mime']) . ';base64,' . base64_encode($follower['usr_foto_perfil']);
+                                } else {
+                                    $followerProfilePicSrc = htmlspecialchars($base_path) . 'Views/pictures/defaultpfp.jpg';
+                                }
+                                $followerFullName = trim(htmlspecialchars($follower['usr_nombre'] . ' ' . $follower['usr_apellido_paterno']));
+                            ?>
+                            <li class="list-group-item d-flex align-items-center px-0 py-2">
+                                <a href="<?php echo htmlspecialchars($base_path) . 'profile/' . htmlspecialchars($follower['usr_id']); ?>" class="text-decoration-none d-flex align-items-center text-body w-100">
+                                    <img src="<?php echo $followerProfilePicSrc; ?>" class="rounded-circle me-2" width="40" height="40" alt="<?php echo htmlspecialchars($follower['usr_username']); ?>" style="object-fit: cover;">
+                                    <div class="flex-grow-1">
+                                        <span class="fw-bold d-block" style="font-size: 0.9rem;"><?php echo $followerFullName; ?></span>
+                                        <small class="text-muted d-block" style="font-size: 0.8rem;">@<?php echo htmlspecialchars($follower['usr_username']); ?></small>
                                     </div>
-                                    <div class="col-10">
-                                        <h4 class="mt-2 ms-0"><?php echo htmlspecialchars($nombreCompleto)?></h4>
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <p>At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis 
-                                        praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias 
-                                        excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui 
-                                        officia deserunt mollitia animi, id est laborum et dolorum fuga.</p>
-                                    <img src="<?php echo htmlspecialchars($base_path)?>/pictures/img.jpg" alt="">
-                                </div>
-                                <div class="d-flex justify-content-between mt-3">
-                                    <button class="btn btn-custom btn-sm">
-                                        <i class="bi bi-hand-thumbs-up"></i> 342
-                                    </button>
-                                    <button class="btn btn-custom btn-sm">
-                                        <i class="bi bi-chat"></i> 13 Comentarios
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            
+                                </a>
+                                <?php
+                                // BOTÓN SEGUIR/DEJAR DE SEGUIR para cada usuario en la lista (si no es el perfil propio Y no es el usuario logueado mismo)
+                                if ($loggedInUserId && $loggedInUserId != $follower['usr_id'] && !$isOwnProfile) {
+                                    // Necesitamos saber si el $loggedInUserId sigue a este $follower['usr_id']
+                                    // Esto requeriría una comprobación adicional, quizás pasada desde el controlador o hecha aquí.
+                                    // Por simplicidad ahora, lo omitimos, pero es un punto a considerar para "mejoras".
+                                } elseif ($loggedInUserId && $loggedInUserId != $follower['usr_id'] && $isOwnProfile) {
+                                    // Si estoy viendo mi propio perfil y la lista de mis seguidores:
+                                    // ¿El $loggedInUserId (yo) sigo a este seguidor ($follower['usr_id'])?
+                                    // Esta información también se necesitaría del $followModel->checkFollowing($loggedInUserId, $follower['usr_id'])
+                                    // y pasarla a la vista dentro del bucle de $followersPreview o cargarla vía JS.
+                                    // Por ahora, mantendremos simple la card de seguidores.
+                                }
+                                ?>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <?php if ($followersCount > count($followersPreview)): ?>
+                        <div class="text-center mt-2">
+                            <button class="btn btn-sm btn-outline-primary view-all-list-btn" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#listDisplayModal" 
+                                    data-list-type="followers"
+                                    data-user-id="<?php echo htmlspecialchars($profileUserID ?? $loggedInUserId); ?>">
+                                Ver todos
+                            </button>
                         </div>
+                    <?php endif; ?>
+                <?php elseif ($followersCount > 0): ?>
+                     <p class="text-muted small text-center py-2">No se pudieron cargar los seguidores.</p> <?php else: ?>
+                    <p class="text-muted small text-center py-2">Aún no tiene seguidores.</p>
+                <?php endif; ?>
+            </div>
                     </div>
-                   
+
+
+                    
                 </div>
-        
--->
 
 
 <div class="col-md-6">
@@ -282,20 +321,18 @@ if ($coverPicData && $coverPicMime) {
                                     
                                     ?>
 
-                                    <div class="d-flex justify-content-between">
-                                        <button class="btn btn-custom btn-sm like-button <?php echo $post['liked_by_user'] ? 'liked' : ''; ?>" data-post-id="<?php echo $post['pub_id_publicacion']; ?>">
-                                            <i class="bi <?php echo $post['liked_by_user'] ? 'bi-hand-thumbs-up-fill' : 'bi-hand-thumbs-up'; ?>"></i>
-                                            <span class="like-count"><?php echo $post['like_count']; ?></span>
+                                    <div class="d-flex justify-content-start align-items-center gap-3 post-actions border-top mt-2 pt-2">
+                                        <button class="btn btn-sm btn-light like-button <?php echo ($post['liked_by_user'] ?? false) ? 'text-primary fw-bold liked' : 'text-muted'; ?>" 
+                                                data-post-id="<?php echo htmlspecialchars($post['pub_id_publicacion']); ?>" title="Me gusta">
+                                            <i class="bi <?php echo ($post['liked_by_user'] ?? false) ? 'bi-hand-thumbs-up-fill' : 'bi-hand-thumbs-up'; ?>"></i>
+                                            <span class="like-count"><?php echo htmlspecialchars($post['like_count'] ?? 0); ?></span>
                                         </button>
-                                        <button class="btn btn-custom btn-sm comment-button" data-post-id="<?php echo $post['pub_id_publicacion']; ?>">
-                                            <i class="bi bi-chat"></i> <?php echo $post['comment_count']; ?> Comentarios
+                                        <button class="btn btn-sm btn-light comment-button text-muted" 
+                                                data-post-id="<?php echo htmlspecialchars($post['pub_id_publicacion']); ?>" 
+                                                title="Comentar">
+                                            <i class="bi bi-chat-left-text"></i> <span class="comment-count"><?php echo htmlspecialchars($post['comment_count'] ?? 0); ?></span>
                                         </button>
-                                         <!-- Puedes añadir botón de compartir -->
                                     </div>
-                                     <!-- Área para comentarios (podría cargarse con AJAX) -->
-                                     <div class="comments-section mt-3" id="comments-<?php echo $post['pub_id_publicacion']; ?>" style="display: none;">
-                                         <!-- Los comentarios irían aquí -->
-                                     </div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -310,58 +347,56 @@ if ($coverPicData && $coverPicMime) {
                 <div class="col-md-3">
                     <div class="card mb-3">
                         <div class="card-body">
-                            <h5 class="card-title">Fotos <span class="badge bg-primary">45</span></h5>
-                            <div class="row g-1">
-                                
-                               
-                                <div class="col-4">
-                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/img.jpg" class="img-preview rounded">
-                                </div>
-
-                                <div class="col-4">
-                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/img2.jpg" class="img-preview rounded">
-                                </div>
-
-                                <div class="col-4">
-                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/img3.jpg" class="img-preview rounded">
-                                </div>
-
-                                <div class="col-4">
-                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/img4.jpg" class="img-preview rounded">
-                                </div>
-
-                                <div class="col-4">
-                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/img5.jpg" class="img-preview rounded">
-                                </div>
-
-                                <div class="col-4">
-                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/img6.jpg" class="img-preview rounded">
-                                </div>
-
-                                <div class="col-4">
-                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/miku.jpg" class="img-preview rounded">
-                                </div>
-
-                                <div class="col-4">
-                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/cat.jpg" class="img-preview rounded">
-                                </div>
-
-                                <div class="col-4">
-                                    <img src="<?php echo htmlspecialchars($base_path)?>Views/pictures/meme icon.jpg" class="img-preview rounded">
-                                </div>
-                            
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="card-title mb-0">Fotos</h5>
+                                <?php 
+                                // Para el contador, podrías querer un SP aparte que solo cuente
+                                // las imágenes visibles para el viewer_user_id, o usar el tamaño del array si es suficiente.
+                                // Por ahora, usamos el tamaño del array que trajimos.
+                                $mediaGridCount = count($userMediaForGrid ?? []);
+                                if ($mediaGridCount > 0): 
+                                ?>
+                                    <span class="badge bg-primary"><?php echo $mediaGridCount; ?></span>
+                                <?php endif; ?>
                             </div>
-                            
-                        </div>
-                    </div>
-                    
-                    <div class="card">
-                        <div class="card-body">
-                            
-                        </div>
-                    </div>
-                </div>
 
+                            <?php if (!empty($userMediaForGrid)): ?>
+                                <div class="row g-2"> 
+                                    <?php foreach ($userMediaForGrid as $mediaItem): ?>
+                                        <div class="col-4">
+                                            <?php
+                                                // Construir la URL de la miniatura.
+                                                // Idealmente, get_media.php podría generar una miniatura real si se le pasa un parámetro.
+                                                // Por ahora, solo obtenemos el medio completo y dejamos que CSS lo escale.
+                                                $mediaUrl = htmlspecialchars($base_path) . 'get_media.php?id=' . htmlspecialchars($mediaItem['pubmed_id']);
+                                                // Si quieres un enlace a la publicación original:
+                                                // $postLink = htmlspecialchars($base_path) . 'post/' . htmlspecialchars($mediaItem['pub_id_publicacion']);
+                                            ?>
+                                            <a href="<?php echo $mediaUrl; ?>" 
+                                            data-bs-toggle="lightbox" 
+                                            data-gallery="user-profile-gallery" 
+                                            data-title="Publicación <?php echo htmlspecialchars($mediaItem['pub_id_publicacion']); ?>">
+                                                <img src="<?php echo $mediaUrl; ?>" 
+                                                    class="img-fluid rounded user-photo-grid-item" 
+                                                    alt="Foto del usuario <?php echo htmlspecialchars($username); ?>"
+                                                    style="object-fit: cover; width: 100%; height: 90px; aspect-ratio: 1/1;"> 
+                                            </a>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <?php 
+                                // Opcional: Botón "Ver todas las fotos" si tienes más de las que muestras
+                                // if ($totalUserImagesCount > $mediaGridCount) { // Necesitarías $totalUserImagesCount del controlador
+                                //     echo '<div class="text-center mt-2"><a href="#" class="btn btn-sm btn-outline-secondary">Ver todas</a></div>';
+                                // }
+                                ?>
+                            <?php else: ?>
+                                <p class="text-muted small text-center py-3">No hay fotos para mostrar.</p>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+    </div>
             </div>
        
     </div>
@@ -373,6 +408,7 @@ if ($coverPicData && $coverPicMime) {
     <script>
         console.log("Definiendo currentUserData...");
         window.currentUserData = {
+            loggedInUserId: <?php echo json_encode($loggedInUserId); ?>,
             userId: <?php echo json_encode($userId); ?>,
             username: <?php echo json_encode($username); ?>,
             nombreCompleto: <?php echo json_encode($nombreCompleto); ?>,
@@ -396,8 +432,12 @@ if ($coverPicData && $coverPicMime) {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="<?php echo htmlspecialchars($base_path)?>Views/js/validation.js"></script>
-    <script src="<?php echo htmlspecialchars($base_path); ?>Views/js/modal.js"></script>
     <script src="<?php echo htmlspecialchars($base_path); ?>Views/js/main.js"></script>
+    <script src="<?php echo htmlspecialchars($base_path)?>Views/js/follow_handler.js"></script>
+    <script src="<?php echo htmlspecialchars($base_path)?>Views/js/modal_insights_manager.js"></script>
+    <script src="<?php echo htmlspecialchars($base_path); ?>Views/js/modal.js"></script>
+    <script src="<?php echo htmlspecialchars($base_path)?>Views/js/post_interactions.js"></script>
+    <script src="<?php echo htmlspecialchars($base_path)?>Views/js/validation.js"></script>
+
 </body>
 </html>

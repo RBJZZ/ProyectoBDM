@@ -1,18 +1,22 @@
 <?php
-// Controllers/PostController.php
 require_once __DIR__ . '/../Models/Post.php';
-// require_once __DIR__ . '/../Models/User.php'; // para verificar amistades
-
 class PostController {
 
     private $postModel;
 
     public function __construct() {
         $this->postModel = new Post();
-        // $this->userModel = new User();
         if (session_status() == PHP_SESSION_NONE) {
             session_start();
         }
+    }
+
+    private function isInTransaction(): bool {
+        if (method_exists($this->postModel, 'isInTransaction')) {
+            return $this->postModel->isInTransaction();
+        }
+        error_log("PostController - Advertencia: El método isInTransaction no existe en PostModel.");
+        return false; 
     }
 
     private function checkAuth(): bool {
@@ -22,6 +26,18 @@ class PostController {
             return false;
         }
         return true;
+    }
+
+    
+
+    private function ensureLoggedIn(): int { 
+        if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true || !isset($_SESSION['user_id'])) {
+            http_response_code(401);
+            header('Content-Type: application/json'); 
+            echo json_encode(['success' => false, 'message' => 'Autenticación requerida.']);
+            exit();
+        }
+        return (int)$_SESSION['user_id'];
     }
 
     public function update($postId) {
@@ -35,30 +51,23 @@ class PostController {
         $userId = $_SESSION['user_id'];
         $postId = (int)$postId;
 
-        // --- 1. Verificar Propiedad (MUY IMPORTANTE) ---
-        // Necesitamos un método en el Modelo para obtener el ID del dueño del post
-        // O adaptar el SP 'G' para devolver solo el owner ID si existe y el solicitante es dueño.
-        $ownerId = $this->postModel->getPostOwnerId($postId); // Necesitarás crear este método simple en Post.php
+        
+        $ownerId = $this->postModel->getPostOwnerId($postId); 
         if ($ownerId === null || $ownerId !== $userId) {
             error_log("Intento de actualización denegado: User $userId intentó editar Post $postId (Dueño: " . ($ownerId ?? 'No encontrado') . ")");
-            http_response_code(403); // Forbidden
+            http_response_code(403); 
             echo json_encode(['success' => false, 'message' => 'No tienes permiso para editar esta publicación.']);
             return;
         }
 
-        // --- 2. Obtener Datos del Request ---
         $text = $_POST['post_text'] ?? null;
-        $privacy = $_POST['post_privacy'] ?? null; // Obtener el valor enviado
+        $privacy = $_POST['post_privacy'] ?? null; 
         $removedMediaIdsString = $_POST['removed_media_ids'] ?? '';
         $newMediaFiles = $_FILES['new_post_media'] ?? null;
 
-        // Validar que al menos texto o nuevos archivos estén presentes si se quita toda la media existente
-        // (Lógica de validación más compleja puede ir aquí si es necesario)
 
-        $dbTransactionSuccess = false; // Flag para controlar el commit/rollback
+        $dbTransactionSuccess = false; 
 
-        // --- 3. Iniciar Transacción ---
-        // Asumiendo que tu conexión en el Modelo permite transacciones
         if (!$this->postModel->beginTransaction()) {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Error interno al iniciar la actualización.']);
@@ -66,25 +75,23 @@ class PostController {
         }
 
         try {
-            // --- 4. Eliminar Media Marcada ---
+
             $removedMediaIds = [];
             if (!empty($removedMediaIdsString)) {
-                $removedMediaIds = array_filter(explode(',', $removedMediaIdsString), 'is_numeric'); // Limpiar y validar IDs
+                $removedMediaIds = array_filter(explode(',', $removedMediaIdsString), 'is_numeric'); 
                 if (!empty($removedMediaIds)) {
-                    // Necesitamos un método para eliminar media específica por ID
                     if (!$this->postModel->deletePostMediaItems($postId, $userId, $removedMediaIds)) {
-                        // Error al eliminar, lanzar excepción para rollback
                         throw new Exception("Error al eliminar medios marcados.");
                     }
                     error_log("User $userId eliminó media IDs [" . implode(',', $removedMediaIds) . "] del Post $postId");
                 }
             }
 
-            // --- 5. Añadir Nueva Media ---
+          
             $mediaErrors = [];
             $mediaSuccessCount = 0;
             if (!empty($newMediaFiles) && isset($newMediaFiles['error']) && $newMediaFiles['error'][0] !== UPLOAD_ERR_NO_FILE) {
-                // Reutilizar lógica similar a la de store(), pero usando addPostMedia
+                
                  $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/quicktime', 'video/webm'];
                  $maxFileSize = 100 * 1024 * 1024;
                  $numFiles = count($newMediaFiles['name']);
@@ -106,7 +113,7 @@ class PostController {
                          $mediaTypeEnum = ($fileType === 'image') ? 'Imagen' : (($fileType === 'video') ? 'Video' : null);
 
                          if ($mediaTypeEnum) {
-                             // Usamos el método existente addPostMedia
+                            
                              if ($this->postModel->addPostMedia($postId, $mediaData, $mimeType, $mediaTypeEnum)) {
                                  $mediaSuccessCount++;
                                  error_log("User $userId añadió nuevo medio '$fileName' al Post $postId");
@@ -118,19 +125,15 @@ class PostController {
                      } elseif ($newMediaFiles['error'][$i] !== UPLOAD_ERR_NO_FILE) {
                         $mediaErrors[] = "Error subida '{$newMediaFiles['name'][$i]}': Código {$newMediaFiles['error'][$i]}.";
                      }
-                 } // Fin for
+                 } 
 
-                 // Si hubo errores graves al añadir media, podríamos querer hacer rollback
+                 
                  if (!empty($mediaErrors) && $mediaSuccessCount === 0 && count($newMediaFiles['name']) > 0) {
-                      // Puedes decidir si un error de media debe revertir toda la edición
-                      // throw new Exception("Errores graves al subir nuevos medios.");
+                     
                       error_log("Errores al subir media nueva para Post $postId: " . implode('; ', $mediaErrors));
                  }
-            } // Fin if newMediaFiles
+            } 
 
-            // --- 6. Actualizar Texto y Privacidad ---
-            // Solo si se proporcionaron valores (para no sobreescribir con null si no se envían)
-            // El SP usa COALESCE, así que podemos pasar los valores directamente.
              if ($text !== null || $privacy !== null) {
                  if (!$this->postModel->updatePostDetails($postId, $userId, $text, $privacy)) {
                     throw new Exception("Error al actualizar detalles del post.");
@@ -138,7 +141,6 @@ class PostController {
                  error_log("User $userId actualizó detalles del Post $postId (Texto: " . ($text ? 'Sí' : 'No') . ", Privacidad: " . ($privacy ?? 'No') . ")");
              }
 
-            // --- 7. Commit Transacción ---
             if ($this->postModel->commit()) {
                 $dbTransactionSuccess = true;
                 error_log("Transacción COMMIT exitosa para actualización Post $postId por User $userId");
@@ -148,32 +150,27 @@ class PostController {
 
         } catch (Exception $e) {
             error_log("Excepción durante actualización Post $postId por User $userId: " . $e->getMessage());
-            // --- 8. Rollback en caso de error ---
             $this->postModel->rollback();
             error_log("Transacción ROLLBACK ejecutada para actualización Post $postId por User $userId");
             $dbTransactionSuccess = false;
         }
 
-        // --- 9. Enviar Respuesta JSON ---
         header('Content-Type: application/json');
         if ($dbTransactionSuccess) {
             $responseMessage = 'Publicación actualizada correctamente.';
             if(!empty($mediaErrors)) {
                  $responseMessage .= ' Algunos archivos nuevos no se pudieron guardar: ' . implode(', ', $mediaErrors);
-                 // Podrías enviar un código 207 (Multi-Status) si lo deseas
             }
             echo json_encode(['success' => true, 'message' => $responseMessage]);
         } else {
-            http_response_code(500); // Error interno si falló la transacción
+            http_response_code(500); 
             echo json_encode(['success' => false, 'message' => 'Error al actualizar la publicación. Verifica los logs o inténtalo de nuevo.']);
         }
         exit();
     }
 
-    // --- MÉTODO PARA ELIMINAR POST (NUEVO) ---
     public function delete($postId) {
         if (!$this->checkAuth()) { return; }
-         // Permitir POST o DELETE
         if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'DELETE') {
              http_response_code(405);
              echo json_encode(['success' => false, 'message' => 'Método no permitido.']);
@@ -183,16 +180,14 @@ class PostController {
         $userId = $_SESSION['user_id'];
         $postId = (int)$postId;
 
-        // Verificar Propiedad (Reutilizar método o lógica)
         $ownerId = $this->postModel->getPostOwnerId($postId);
         if ($ownerId === null || $ownerId !== $userId) {
             error_log("Intento de eliminación denegado: User $userId intentó borrar Post $postId (Dueño: " . ($ownerId ?? 'No encontrado') . ")");
-            http_response_code(403); // Forbidden
+            http_response_code(403); 
             echo json_encode(['success' => false, 'message' => 'No tienes permiso para eliminar esta publicación.']);
             return;
         }
 
-        // Llamar al modelo para eliminar (usando SP acción 'D')
         $success = $this->postModel->deletePost($postId, $userId);
 
         header('Content-Type: application/json');
@@ -208,166 +203,203 @@ class PostController {
     }
 
     public function store() {
-        if (!$this->checkAuth()) { return; } 
+        $userId = $this->ensureLoggedIn();
+        
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-             http_response_code(405);
-             echo json_encode(['success' => false, 'message' => 'Método no permitido.']);
-             return;
+            http_response_code(405);
+            if (!headers_sent()) { header('Content-Type: application/json'); }
+            echo json_encode(['success' => false, 'message' => 'Método no permitido. Se requiere POST.']);
+            exit(); 
         }
 
-        $userId = $_SESSION['user_id'];
+        
+
         $text = $_POST['post_text'] ?? null;
         $privacy = $_POST['post_privacy'] ?? 'Publico'; 
         $mediaFiles = $_FILES['post_media'] ?? null;
 
-        if (empty(trim($text ?? '')) && (empty($mediaFiles) || $mediaFiles['error'][0] === UPLOAD_ERR_NO_FILE)) {
-              http_response_code(400);
-              echo json_encode(['success' => false, 'message' => 'La publicación no puede estar vacía.']);
-              return;
+        $communityIdInput = $_POST['community_id'] ?? null;
+        $communityId = null; 
+        if ($communityIdInput !== null && $communityIdInput !== '' && $communityIdInput !== 'null') {
+            $communityId = filter_var($communityIdInput, FILTER_VALIDATE_INT);
+            if ($communityId === false) { 
+                http_response_code(400); 
+                if (!headers_sent()) { header('Content-Type: application/json'); }
+                echo json_encode(['success' => false, 'message' => "ID de comunidad proporcionado ('" . htmlspecialchars($communityIdInput) . "') no es un entero válido."]);
+                exit();
+            }
         }
 
-        $postId = $this->postModel->createPost($userId, $text, $privacy);
+        $isTextEmpty = empty(trim($text ?? ''));
+        $noMediaUploaded = empty($mediaFiles) || !isset($mediaFiles['tmp_name'][0]) || empty($mediaFiles['tmp_name'][0]) || $mediaFiles['error'][0] === UPLOAD_ERR_NO_FILE;
 
-        if ($postId === false) {
-            http_response_code(500);
-            error_log("PostController::store - Error al llamar PostModel::createPost para user $userId");
-            echo json_encode(['success' => false, 'message' => 'Error interno al guardar la publicación.']);
-            return;
+        if ($isTextEmpty && $noMediaUploaded) {
+            http_response_code(400); 
+            if (!headers_sent()) { header('Content-Type: application/json'); }
+            echo json_encode(['success' => false, 'message' => 'La publicación no puede estar vacía. Se requiere texto y/o archivos multimedia.']);
+            exit();
         }
+        
+        try {
+            if (!$this->postModel->beginTransaction()) {
+                error_log("PostController::store - Fallo crítico al iniciar la transacción para user $userId.");
+                throw new Exception("No se pudo iniciar la operación de guardado. Inténtalo de nuevo más tarde.", 503); 
+            }
+            error_log("PostController::store - Transacción iniciada para user $userId.");
 
-        $mediaErrors = [];
-        $mediaSuccessCount = 0;
-        if (!empty($mediaFiles) && $mediaFiles['error'][0] !== UPLOAD_ERR_NO_FILE) {
-            $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/quicktime', 'video/webm']; 
-            $maxFileSize = 100 * 1024 * 1024; 
+            $postId = $this->postModel->createPost($userId, $text, $privacy, $communityId);
+            error_log("PostController::store - Resultado de createPost para user $userId: " . ($postId === false ? 'FALLO' : "ID $postId") . ($communityId ? " en comunidad ID $communityId" : " (post normal)"));
 
-            $numFiles = count($mediaFiles['name']);
-            for ($i = 0; $i < $numFiles; $i++) {
-                 if ($mediaFiles['error'][$i] === UPLOAD_ERR_OK) {
-                     $tmpName = $mediaFiles['tmp_name'][$i];
-                     $fileName = $mediaFiles['name'][$i]; 
-                     $fileSize = $mediaFiles['size'][$i];
-                     $mimeType = $mediaFiles['type'][$i]; 
+            if ($postId === false) {
+                throw new Exception("Error interno al registrar la publicación base.", 500);
+            }
 
-                     
-                     if ($fileSize > $maxFileSize) {
-                         $mediaErrors[] = "Archivo '$fileName' excede el tamaño máximo.";
-                         continue;
-                     }
-                     if (!in_array($mimeType, $allowedMimeTypes)) {
-                        $mediaErrors[] = "Archivo '$fileName' tiene un tipo no permitido ($mimeType).";
-                        continue;
-                     }
-                   
+            $mediaErrors = [];
+            $mediaSuccessCount = 0;
+            
+            if (!$noMediaUploaded) { 
+                error_log("PostController::store - Iniciando procesamiento de media para postId: $postId. Número de archivos posibles: " . count($mediaFiles['name']));
+                
+                $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/quicktime', 'video/webm'];
+                $maxFileSize = 25 * 1024 * 1024; 
 
-                     $mediaData = file_get_contents($tmpName);
-                     if ($mediaData === false) {
-                         $mediaErrors[] = "Error al leer el archivo '$fileName'.";
-                         continue;
-                     }
+                $numFiles = count($mediaFiles['name']);
+                for ($i = 0; $i < $numFiles; $i++) {
+                    if (!isset($mediaFiles['error'][$i]) || $mediaFiles['error'][$i] === UPLOAD_ERR_NO_FILE) {
+                        continue; 
+                    }
 
-                     $fileType = explode('/', $mimeType)[0]; 
-                     $mediaTypeEnum = ($fileType === 'image') ? 'Imagen' : (($fileType === 'video') ? 'Video' : null);
+                    if ($mediaFiles['error'][$i] === UPLOAD_ERR_OK) {
+                        $tmpName = $mediaFiles['tmp_name'][$i];
+                        $fileName = basename($mediaFiles['name'][$i]); 
+                        $fileSize = $mediaFiles['size'][$i];
+                        
+                        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                        $mimeType = $finfo ? finfo_file($finfo, $tmpName) : false; 
+                        if ($finfo) finfo_close($finfo);
 
-                     if ($mediaTypeEnum) {
-                         if ($this->postModel->addPostMedia($postId, $mediaData, $mimeType, $mediaTypeEnum)) {
-                             $mediaSuccessCount++;
-                         } else {
-                             $mediaErrors[] = "Error al guardar el archivo '$fileName' en la BD.";
-                             error_log("PostController::store - Error al llamar PostModel::addPostMedia para post $postId, file $fileName");
-                         }
-                     } else {
-                          $mediaErrors[] = "Tipo de archivo desconocido para '$fileName'.";
-                     }
+                        if ($mimeType === false) {
+                            $mimeType = $mediaFiles['type'][$i]; 
+                            error_log("PostController::store - finfo_file falló para '$fileName' (tmp: $tmpName), usando MIME de \$_FILES: $mimeType");
+                        }
+                        
+                        error_log("PostController::store - Procesando archivo [$i]: '$fileName', Size: $fileSize, MIME: '$mimeType', TmpName: '$tmpName'");
 
-                 } elseif ($mediaFiles['error'][$i] !== UPLOAD_ERR_NO_FILE) {
-                     $mediaErrors[] = "Error al subir el archivo '{$mediaFiles['name'][$i]}': Código {$mediaFiles['error'][$i]}.";
-                 }
-            } 
-        } 
+                        if ($fileSize > $maxFileSize) {
+                            $mediaErrors[] = "Archivo '$fileName' ($fileSize bytes) excede el tamaño máximo permitido ($maxFileSize bytes).";
+                            error_log("PostController::store - Archivo '$fileName' excede tamaño.");
+                            continue; 
+                        }
+                        if (!in_array($mimeType, $allowedMimeTypes)) {
+                            $mediaErrors[] = "Archivo '$fileName' tiene un tipo ('$mimeType') no permitido.";
+                            error_log("PostController::store - Archivo '$fileName' tipo ('$mimeType') no permitido.");
+                            continue;
+                        }
 
-       
-        header('Content-Type: application/json');
-        if (empty($mediaErrors)) {
-            echo json_encode([
-                'success' => true,
-                'message' => 'Publicación creada con éxito.',
-                'postId' => $postId,
-                'mediaUploaded' => $mediaSuccessCount
-            ]);
-        } else {
-           
-             http_response_code(207); 
-             echo json_encode([
-                 'success' => true, 
-                 'message' => 'Publicación creada, pero con errores al procesar algunos archivos.',
-                 'postId' => $postId,
-                 'mediaUploaded' => $mediaSuccessCount,
-                 'mediaErrors' => $mediaErrors
-             ]);
+                        $mediaData = file_get_contents($tmpName);
+                        if ($mediaData === false) {
+                            $mediaErrors[] = "Error crítico al leer el contenido del archivo '$fileName'.";
+                            error_log("PostController::store - FALLO file_get_contents para '$fileName' (tmp: $tmpName).");
+                            continue; 
+                        }
+
+                        $fileTypePrefix = explode('/', $mimeType)[0];
+                        $mediaTypeEnum = ($fileTypePrefix === 'image') ? 'Imagen' : (($fileTypePrefix === 'video') ? 'Video' : null);
+
+                        if ($mediaTypeEnum) {
+                            error_log("PostController::store - Llamando a addPostMedia para postId: $postId, file: '$fileName', mime: '$mimeType', type: '$mediaTypeEnum'");
+                            if (!$this->postModel->addPostMedia($postId, $mediaData, $mimeType, $mediaTypeEnum)) {
+                                $mediaErrors[] = "Error al guardar el archivo '$fileName' en la base de datos.";
+                                error_log("PostController::store - addPostMedia FALLO para '$fileName'. El modelo (o SP) debería haber logueado detalles.");
+                            } else {
+                                $mediaSuccessCount++;
+                                error_log("PostController::store - addPostMedia EXITO para: '$fileName'");
+                            }
+                        } else {
+                            $mediaErrors[] = "Tipo de archivo multimedia desconocido para '$fileName' (MIME: '$mimeType').";
+                            error_log("PostController::store - Tipo de archivo multimedia desconocido para '$fileName' (MIME: '$mimeType')");
+                        }
+                    } elseif ($mediaFiles['error'][$i] !== UPLOAD_ERR_NO_FILE) {
+                        $mediaErrors[] = "Error al subir el archivo '{$mediaFiles['name'][$i]}': Código de error PHP {$mediaFiles['error'][$i]}.";
+                        error_log("PostController::store - Error de subida PHP para '{$mediaFiles['name'][$i]}': código {$mediaFiles['error'][$i]}.");
+                    }
+                } 
+                error_log("PostController::store - Fin procesamiento de media para postId: $postId. Archivos con éxito: $mediaSuccessCount, Errores de media: " . count($mediaErrors) . " (" . implode('; ', $mediaErrors) . ")");
+            
+                if ($mediaSuccessCount === 0 && count($mediaErrors) > 0 && $isTextEmpty) {
+                    error_log("PostController::store - Todos los archivos multimedia fallaron y no hay texto. Lanzando excepción para rollback.");
+                    throw new Exception("No se pudo procesar ningún archivo multimedia y no hay texto para la publicación. Errores: " . implode('; ', $mediaErrors), 400); // 400 Bad Request
+                }
+
+            } else {
+                error_log("PostController::store - No se proporcionaron archivos de media o el primer archivo tenía error UPLOAD_ERR_NO_FILE para postId: $postId");
+            }
+
+            error_log("PostController::store - postId: $postId. A PUNTO DE INTENTAR COMMIT. mediaSuccessCount: $mediaSuccessCount, mediaErrors: " . count($mediaErrors));
+            if ($this->postModel->commit()) {
+                error_log("PostController::store - COMMIT EXITOSO para postId: $postId");
+                $responseMessage = ($communityId !== null) ? "Publicación creada en la comunidad exitosamente." : "Publicación creada exitosamente.";
+                if (!empty($mediaErrors)) {
+                    $responseMessage .= " Advertencia: algunos archivos multimedia no se pudieron guardar: " . implode(', ', $mediaErrors);
+                }
+                if (!headers_sent()) { header('Content-Type: application/json'); }
+                echo json_encode(['success' => true, 'message' => $responseMessage, 'post_id' => $postId]);
+            } else {
+                error_log("PostController::store - COMMIT FALLÓ explícitamente para postId: $postId. Esto es inusual.");
+                throw new Exception("Error crítico al intentar finalizar la publicación (falló el commit).", 500);
+            }
+
+        } catch (PDOException $e) { 
+            if ($this->isInTransaction()) {
+                $this->postModel->rollback();
+                error_log("PostController::store - PDOException capturada, Rollback ejecutado para user $userId.");
+            } else {
+                error_log("PostController::store - PDOException capturada, pero no había transacción activa para user $userId (o ya se revirtió).");
+            }
+            error_log("PostController::store - PDOException: " . $e->getMessage() . " - Código: " . $e->getCode() . ". Archivo: " . $e->getFile() . " Línea: " . $e->getLine() /*. ". Trace: " . $e->getTraceAsString()*/); // Trace puede ser muy largo para logs.
+            http_response_code(500); 
+            if (!headers_sent()) { header('Content-Type: application/json'); }
+
+            echo json_encode(['success' => false, 'message' => 'Error de base de datos al procesar la publicación. Inténtalo de nuevo más tarde.']);
+        } catch (Exception $e) { 
+             if ($this->isInTransaction()) {
+                $this->postModel->rollback();
+                error_log("PostController::store - Exception capturada, Rollback ejecutado para user $userId.");
+            } else {
+                error_log("PostController::store - Exception capturada, pero no había transacción activa para user $userId (o ya se revirtió).");
+            }
+            error_log("PostController::store - Exception: " . $e->getMessage() . " - Código: " . $e->getCode() . ". Archivo: " . $e->getFile() . " Línea: " . $e->getLine() /*. ". Trace: " . $e->getTraceAsString()*/);
+            
+            $httpCode = ($e->getCode() >= 400 && $e->getCode() < 600) ? $e->getCode() : 500; 
+            http_response_code($httpCode);
+            if (!headers_sent()) { header('Content-Type: application/json'); }
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]); 
         }
-        exit();
+        exit(); 
     }
 
     public function like($postId) {
-         if (!$this->checkAuth() || $_SERVER['REQUEST_METHOD'] !== 'POST') { return; }
+        $loggedInUserId = $this->ensureLoggedIn(); 
+        $postId = (int)$postId;
 
-         $userId = $_SESSION['user_id'];
-         $success = $this->postModel->likePost((int)$postId, $userId);
+        $postModel = new Post();
+        $result = $postModel->manageLike('L', $postId, $loggedInUserId);
 
-         header('Content-Type: application/json');
-         if ($success) {
-             
-             echo json_encode(['success' => true, 'message' => 'Like añadido.']);
-         } else {
-             http_response_code(500); 
-             echo json_encode(['success' => false, 'message' => 'Error al añadir like.']);
-         }
-         exit();
+        header('Content-Type: application/json');
+        echo json_encode($result);
     }
 
     public function unlike($postId) {
-         if (!$this->checkAuth() || ($_SERVER['REQUEST_METHOD'] !== 'POST' && $_SERVER['REQUEST_METHOD'] !== 'DELETE')) { return; }
+        $loggedInUserId = $this->ensureLoggedIn();
+        $postId = (int)$postId;
+        
+        $postModel = new Post();
+        $result = $postModel->manageLike('U', $postId, $loggedInUserId);
 
-         $userId = $_SESSION['user_id'];
-         $success = $this->postModel->unlikePost((int)$postId, $userId);
-
-         header('Content-Type: application/json');
-         if ($success) {
-             echo json_encode(['success' => true, 'message' => 'Like quitado.']);
-         } else {
-             http_response_code(500);
-             echo json_encode(['success' => false, 'message' => 'Error al quitar like.']);
-         }
-         exit();
+        header('Content-Type: application/json');
+        echo json_encode($result);
     }
 
-    public function comment($postId) {
-            if (!$this->checkAuth() || $_SERVER['REQUEST_METHOD'] !== 'POST') { return; }
-
-            $userId = $_SESSION['user_id'];
-            $commentText = $_POST['comment_text'] ?? null; 
-            $replyToId = isset($_POST['reply_to_id']) ? (int)$_POST['reply_to_id'] : null;
-
-             if (empty(trim($commentText ?? ''))) {
-                 http_response_code(400);
-                 echo json_encode(['success' => false, 'message' => 'El comentario no puede estar vacío.']);
-                 exit();
-             }
-
-             $commentId = $this->postModel->addComment((int)$postId, $userId, $commentText, $replyToId);
-
-             header('Content-Type: application/json');
-             if ($commentId !== false) {
-                 echo json_encode(['success' => true, 'message' => 'Comentario añadido.', 'commentId' => $commentId]);
-             } else {
-                 http_response_code(500);
-                 echo json_encode(['success' => false, 'message' => 'Error al guardar el comentario.']);
-             }
-             exit();
-    }
-
- 
     public function show($postId) {
             if (!$this->checkAuth()) {
                  
@@ -396,5 +428,58 @@ class PostController {
             }
     }
 
+    public function comment($postId) {
+        $loggedInUserId = $this->ensureLoggedIn();
+        $postId = (int)$postId;
+        $commentText = $_POST['comment_text'] ?? null; 
+        $replyToId = isset($_POST['reply_to_id']) ? (int)$_POST['reply_to_id'] : null;
+
+            if (empty($commentText)) {
+                header('Content-Type: application/json');
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'El comentario no puede estar vacío.']);
+                exit();
+            }
+
+            $postModel = new Post();
+            $result = $postModel->addComment($postId, $loggedInUserId, $commentText, $replyToId);
+        
+            if ($result['success'] && $result['comment_id']) {
+                $userModel = new User();
+                $commentAuthorData = $userModel->obtenerPerfilUsuario($loggedInUserId);
+                
+                $result['comment'] = [ 
+                    'int_id_interaccion' => $result['comment_id'],
+                    'int_texto_comentario' => $commentText,
+                    'int_fecha' => date('Y-m-d H:i:s'), 
+                    'int_id_respuesta' => $replyToId
+                ];
+                $result['comment_author'] = [
+                    'usr_id' => $loggedInUserId,
+                    'usr_username' => $commentAuthorData['usr_username'] ?? 'yo',
+                    'usr_nombre' => $commentAuthorData['usr_nombre'] ?? 'Yo',
+                    'usr_apellido_paterno' => $commentAuthorData['usr_apellido_paterno'] ?? '',
+                    'usr_foto_perfil_base64' => $commentAuthorData['usr_foto_perfil'] ? base64_encode($commentAuthorData['usr_foto_perfil']) : null,
+                    'usr_foto_perfil_mime' => $commentAuthorData['usr_foto_perfil_mime'] ?? null
+                ];
+            }
+
+        header('Content-Type: application/json');
+        echo json_encode($result);
+    }
+
+    public function getPostComments($postId) {
+        $postId = (int)$postId;
+        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
+        $offset = isset($_GET['offset']) ? (int)$_GET['offset'] : 0;
+
+        $postModel = new Post();
+        $result = $postModel->getComments($postId, $limit, $offset);
+
+        header('Content-Type: application/json');
+        echo json_encode($result);
+    }
 
 } 
+
+?>

@@ -7,8 +7,14 @@
     // Incluir controladores
     require_once __DIR__ . '/Controllers/UserController.php';
     require_once __DIR__ . '/Controllers/PostController.php';
-    require_once __DIR__ . '/Controllers/ShortController.php';
+    require_once __DIR__ . '/Controllers/ShortController.php'; // Si lo vas a usar, descomenta
     require_once __DIR__ . '/Controllers/ProductController.php';
+    require_once __DIR__ . '/Controllers/TagController.php';
+    require_once __DIR__ . '/Controllers/SearchController.php'; // Para la búsqueda
+    require_once __DIR__ . '/Controllers/FollowController.php'; // Para seguir/dejar de seguir
+    require_once __DIR__ . '/Controllers/CommunityController.php';
+    require_once __DIR__ . '/Controllers/InsightsController.php';
+    require_once __DIR__ . '/Controllers/ChatController.php';
 
     $request_uri = $_SERVER['REQUEST_URI'];
     $request_method = $_SERVER['REQUEST_METHOD'];
@@ -21,12 +27,15 @@
     try {
         $userController = new UserController();
         $postController = new PostController();
-        // $chatController = new ChatController(); // <-- Descomentar cuando exista
-        // $communityController = new CommunityController(); // <-- Descomentar cuando exista
-        $productController = new ProductController(); // <-- Descomentar cuando exista
-        // $searchController = new SearchController(); // <-- Descomentar cuando exista
-        // $shortController = new ShortController();
-        // $productController = new ProductController();
+        $chatController = new ChatController();
+        $communityController = new CommunityController(); 
+        $productController = new ProductController(); 
+        $tagController = new TagController();
+        $searchController = new SearchController(); // Instanciado
+        $followController = new FollowController(); // Instanciado
+        $insightsController = new InsightsController();
+        $shortController = new ShortController(); // Si lo vas a usar, descomenta
+        
     } catch (Throwable $e) {
         http_response_code(500);
         error_log("Error Crítico al instanciar controladores: " . $e->getMessage());
@@ -38,11 +47,9 @@
     $clean_uri = strtok($request_uri, '?');
 
     // --- Routing ---
-    // El orden es importante: rutas más específicas primero, luego más generales,
-    // y el root/404 al final.
 
     // Ruta Raíz ('/')
-    if ($clean_uri === $base_path || $clean_uri === rtrim($base_path, '/') . '/index.php') {
+    if ($clean_uri === $base_path || $clean_uri === rtrim($base_path, '/') . '/index.php' || $clean_uri === rtrim($base_path, '/')) {
         if ($request_method === 'GET') {
             if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
                 header('Location: ' . $base_path . 'feed');
@@ -101,118 +108,427 @@
             http_response_code(405); echo "Método no permitido para /feed."; exit();
         }
     }
+    
+    // --- Rutas de Búsqueda ---
+    elseif ($clean_uri === $base_path . 'search') {
+        if ($request_method === 'GET') {
+            $searchController->performSearch($base_path);
+            exit();
+        } else {
+            http_response_code(405);
+            echo "Método no permitido para /search (Se espera GET).";
+            exit();
+        }
+    }
 
-    // Rutas de Perfil de Usuario
-    elseif (strpos($clean_uri, $base_path . 'profile') === 0) {
-        if ($clean_uri === $base_path . 'profile/update') {
-            if ($request_method === 'POST') {
-                $userController->handleProfileUpdate();
-                exit();
-            } else {
-                 http_response_code(405); echo "Método no permitido para actualizar perfil. Se requiere POST."; exit();
-            }
+    // --- Rutas de Acciones de Usuario (Follow/Unfollow) ---
+    // Estas rutas deben ser específicas y procesadas antes que las rutas de perfil más generales si hay solapamiento de patrones.
+    elseif (preg_match('#^' . $base_path . 'user/(\d+)/follow$#', $clean_uri, $matches)) {
+        if ($request_method === 'POST') {
+            $targetUserId = (int)$matches[1];
+            $followController->followUserAction($targetUserId);
+            exit();
+        } else {
+            http_response_code(405);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Método no permitido. Se requiere POST.']);
+            exit();
         }
-        elseif ($clean_uri === $base_path . 'profile/verify-password') {
-            if ($request_method === 'POST') {
-                $userController->verifyCurrentPassword();
-                exit();
-            } else {
-                 http_response_code(405); echo "Método no permitido para verificar contraseña. Se requiere POST."; exit();
-            }
+    }
+
+    
+    elseif (preg_match('#^' . $base_path . 'user/(\d+)/unfollow$#', $clean_uri, $matches)) {
+        if ($request_method === 'POST') { 
+            $targetUserId = (int)$matches[1];
+            $followController->unfollowUserAction($targetUserId);
+            exit();
+        } else {
+            http_response_code(405);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Método no permitido. Se requiere POST.']);
+            exit();
         }
-        elseif ($clean_uri === $base_path . 'profile/update-password') {
-            if ($request_method === 'POST') {
-                $userController->updatePassword();
-                exit();
-            } else {
-                 http_response_code(405); echo "Método no permitido para actualizar contraseña. Se requiere POST."; exit();
-            }
+    }
+
+    elseif ($clean_uri === $base_path . 'users/search_for_group' && $request_method === 'GET') {
+        // Asumiendo que $userController está instanciado
+        $userController->searchUsersForGroupApi();
+        exit();
+    }
+
+    // --- Rutas de Perfil de Usuario ---
+    // Es importante el orden aquí. Rutas más específicas como /profile/update van primero.
+    elseif ($clean_uri === $base_path . 'profile/update') {
+        if ($request_method === 'POST') {
+            $userController->handleProfileUpdate();
+            exit();
+        } else {
+             http_response_code(405); echo "Método no permitido para actualizar perfil. Se requiere POST."; exit();
         }
-        elseif ($clean_uri === $base_path . 'profile') {
-            if ($request_method === 'GET') {
-                $userController->showMyProfile($base_path);
-                exit();
-            } else {
-                 http_response_code(405); echo "Método no permitido para ver /profile."; exit();
-            }
+    }
+    elseif ($clean_uri === $base_path . 'profile/verify-password') {
+        if ($request_method === 'POST') {
+            $userController->verifyCurrentPassword();
+            exit();
+        } else {
+             http_response_code(405); echo "Método no permitido para verificar contraseña. Se requiere POST."; exit();
         }
-        else {
-             http_response_code(404); echo "Ruta de perfil no válida."; exit();
+    }
+    elseif ($clean_uri === $base_path . 'profile/update-password') {
+        if ($request_method === 'POST') {
+            $userController->updatePassword();
+            exit();
+        } else {
+             http_response_code(405); echo "Método no permitido para actualizar contraseña. Se requiere POST."; exit();
+        }
+    }
+    // Ruta para ver perfil de OTRO usuario por ID (debe ir antes de /profile solo si /profile no captura IDs)
+    elseif (preg_match('#^' . $base_path . 'profile/(\d+)$#', $clean_uri, $matches)) {
+        if ($request_method === 'GET') {
+            $profileUserId = (int)$matches[1];
+            $userController->showUserProfile($base_path, $profileUserId); // Necesitas crear este método
+            exit();
+        } else {
+            http_response_code(405); echo "Método no permitido."; exit();
+        }
+    }
+    // Ruta para MI perfil (cuando no hay ID o username en la URL después de /profile)
+    elseif ($clean_uri === $base_path . 'profile') { 
+        if ($request_method === 'GET') {
+            $userController->showMyProfile($base_path);
+            exit();
+        } else {
+             http_response_code(405); echo "Método no permitido para ver /profile."; exit();
         }
     }
 
     elseif ($clean_uri === $base_path . 'chat') {
         if ($request_method === 'GET') {
-            // Requerirá autenticación probablemente
-            // $chatController = new ChatController(); // Asegúrate de instanciar
-            // $chatController->showChatPage($base_path);
-             echo "Página de Chat (Ruta funcional, pendiente de implementación)"; // Salida Temporal
+            $chatController->showChatPage();
             exit();
         } else {
             http_response_code(405); echo "Método no permitido para /chat."; exit();
         }
     }
 
+    elseif ($clean_uri === $base_path . 'chat/conversations' && $request_method === 'GET') {
+        $chatController->getUserConversationsApi(); // Llama al método que acabamos de crear
+        exit();
+    }
+
+    elseif (preg_match('#^' . $base_path . 'chat/messages$#', $clean_uri) && $request_method === 'GET') {
+        $chatController->getChatMessagesApi();
+        exit();
+    }   
+    // Ruta para servir multimedia (ejemplo)
+    elseif (preg_match('#^' . $base_path . 'chat/media/(\d+)$#', $clean_uri, $matches) && $request_method === 'GET') {
+    $messageId = (int)$matches[1];
+    $chatController->serveChatMessageMedia($messageId); // Llama al nuevo método
+    exit();
+    }
+
+    elseif (preg_match('#^' . $base_path . 'chat/details/(\d+)$#', $clean_uri, $matches) && $request_method === 'GET') {
+        $chatId = (int)$matches[1];
+        $chatController->getChatDetailsApi($chatId);
+        exit();
+    }
+
+    elseif ($clean_uri === $base_path . 'chat/individual/create_or_get' && $request_method === 'POST') {
+        $chatController->createOrGetIndividualChatApi(); 
+        exit();
+    }
+
+    elseif ($clean_uri === $base_path . 'chat/group/create' && $request_method === 'POST') {
+        $chatController->createGroupChatApi();
+        exit();
+    }
+
+    elseif ($clean_uri === $base_path . 'chat/group/update_info' && $request_method === 'POST') {
+        $chatController->updateGroupInfoApi(); // Necesitas instanciar ChatController
+        exit();
+    }
+    elseif (preg_match('#^' . $base_path . 'chat/group/(\d+)/members$#', $clean_uri, $matches) && $request_method === 'GET') {
+        $groupId = (int)$matches[1];
+        $chatController->getGroupMembersApi($groupId);
+        exit();
+    }
+
+    elseif (strpos($clean_uri, $base_path . 'chat/users/search_for_group') === 0 && $request_method === 'GET') {
+        // El uso de strpos aquí permite que los parámetros GET no interfieran con la coincidencia de la ruta base.
+        // Asegúrate de que $chatController esté instanciado y tenga el método.
+        if (isset($chatController) && method_exists($chatController, 'searchUsersForGroupApi')) {
+            $chatController->searchUsersForGroupApi(); // Este método leerá los parámetros GET
+        } else {
+            http_response_code(500);
+            error_log("Error: ChatController o método searchUsersForGroupApi no definido.");
+            echo json_encode(['success' => false, 'message' => 'Error interno del servidor al procesar la búsqueda de usuarios.']);
+        }
+        exit();
+    }
+
+    elseif ($clean_uri === $base_path . 'chat/group/add_member' && $request_method === 'POST') {
+        $chatController->addGroupMemberApi();
+        exit();
+    }
+    elseif ($clean_uri === $base_path . 'chat/group/remove_member' && $request_method === 'POST') {
+        $chatController->removeGroupMemberApi();
+        exit();
+    }
+
+    elseif ($clean_uri === $base_path . 'chat/send_message') { 
+        if ($request_method === 'POST') {
+            $chatController->sendMessage();
+            exit();
+        } else {
+            http_response_code(405); echo "Método no permitido."; exit();
+        }
+    }
+
     elseif ($clean_uri === $base_path . 'communities') {
         if ($request_method === 'GET') {
-             // $communityController = new CommunityController(); // Asegúrate de instanciar
-             // $communityController->listCommunities($base_path);
-             echo "Página de Comunidades (Ruta funcional, pendiente de implementación)"; // Salida Temporal
+            $communityController->index($base_path); 
             exit();
-        } else {
-            http_response_code(405); echo "Método no permitido para /communities."; exit();
         }
     }
 
-    elseif ($clean_uri === $base_path . 'marketplace') {
+    elseif ($clean_uri === $base_path . 'communities/create') {
         if ($request_method === 'GET') {
-             $productController = new ProductController(); // Asegúrate de instanciar
-             $productController->showMarketplace($base_path);
-             echo "Página de Marketplace (Ruta funcional, pendiente de implementación)"; // Salida Temporal
+            $communityController->create($base_path);
             exit();
-        } else {
-            http_response_code(405); echo "Método no permitido para /marketplace."; exit();
+        } elseif ($request_method === 'POST') { // Manejar el envío del formulario de creación
+            $communityController->store();
+            exit();
         }
     }
-
+    // Ver una comunidad específica por ID
+    elseif (preg_match('#^' . $base_path . 'communities/(\d+)$#', $clean_uri, $matches)) {
+        if ($request_method === 'GET') {
+            $communityId = (int)$matches[1];
+            $communityController->show($base_path, $communityId);
+            exit();
+        }
+    }
+    // Acción de unirse a una comunidad (para AJAX)
+    elseif (preg_match('#^' . $base_path . 'communities/(\d+)/join$#', $clean_uri, $matches)) {
+        if ($request_method === 'POST') {
+            $communityId = (int)$matches[1];
+            $communityController->joinAction($communityId);
+            exit();
+        }
+    }
+    // Acción de abandonar una comunidad (para AJAX)
+    elseif (preg_match('#^' . $base_path . 'communities/(\d+)/leave$#', $clean_uri, $matches)) {
+        if ($request_method === 'POST') { // o DELETE
+            $communityId = (int)$matches[1];
+            $communityController->leaveAction($communityId);
+            exit();
+        }
+    }
+    // (Opcional) Obtener posts de una comunidad vía AJAX para el feed de la comunidad
+    elseif (preg_match('#^' . $base_path . 'communities/(\d+)/posts$#', $clean_uri, $matches)) {
+        if ($request_method === 'GET') {
+            $communityId = (int)$matches[1];
+            // $communityController->getPostsForCommunityApi($communityId); // Método a crear
+            exit();
+        }
+    }
+    // La ruta /marketplace ya estaba definida dos veces, la segunda es más genérica.
+    // Asegúrate que /product/create y /product/{id} se manejen antes si /marketplace
+    // por alguna razón pudiera solaparse, aunque aquí parecen distintas.
     elseif ($clean_uri === $base_path . 'tags/market') {
         if ($request_method === 'GET') {
-             // Crear TagController.php si no existe
-             // require_once __DIR__ . '/Controllers/TagController.php';
-             // $tagController = new TagController();
-             // $tagController->getMarketTags(); // Método que llama al SP 'T'
-             echo json_encode(['success'=>true, 'data'=>[['tag_id'=>1, 'tag_nombre'=>'Electrónica Temporal'],['tag_id'=>2, 'tag_nombre'=>'Hogar Temporal']]]); // Respuesta Temporal
+             $tagController->getMarketTags();
              exit();
         } else {
             http_response_code(405); echo "Método no permitido para /tags/market."; exit();
         }
     }
 
-    elseif ($clean_uri === $base_path . 'product/create') { // Ruta para el submit del modal
+    elseif ($clean_uri === $base_path . 'shorts') { // Ruta para la página principal de Shorts
+        if ($request_method === 'GET') {
+            $shortController->showShortsPage($base_path); // Llama al método del controlador
+            exit();
+        } else {
+            http_response_code(405);
+            echo "Método no permitido para /shorts.";
+            exit();
+        }
+    }
+
+    elseif (preg_match('#^' . $base_path . 'short/upload$#', $clean_uri)) {
         if ($request_method === 'POST') {
-             // require_once __DIR__ . '/Controllers/ProductController.php'; // Asegúrate que esté incluido
-             // $productController = new ProductController(); // Asegúrate que esté instanciado
-             // $productController->store(); // Método que manejará la creación
-              echo json_encode(['success'=>true, 'message'=>'Publicación de producto recibida (pendiente implementar backend completo).', 'productId'=>rand(100,999)]); // Respuesta Temporal
+            $shortController->handleShortUpload();
+            exit();
+        } else {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Método no permitido para /short/upload. Se requiere POST.']);
+            exit();
+        }
+    }
+
+    elseif (preg_match('#^' . $base_path . 'api/short/data_for_edit$#', $clean_uri)) { // API para obtener datos para editar
+        if ($request_method === 'GET') {
+            $shortController->getShortDataForEditApi();
+            exit();
+        } else {
+            http_response_code(405); header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Método GET requerido.']); exit();
+        }
+    }
+    elseif (preg_match('#^' . $base_path . 'short/update$#', $clean_uri)) { // Para procesar la actualización
+        if ($request_method === 'POST') {
+            $shortController->handleShortUpdate();
+            exit();
+        } else {
+            http_response_code(405); header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Método POST requerido.']); exit();
+        }
+    }
+    elseif (preg_match('#^' . $base_path . 'short/delete$#', $clean_uri)) { // Para procesar la eliminación
+        if ($request_method === 'POST') {
+            $shortController->handleShortDelete();
+            exit();
+        } else {
+            http_response_code(405); header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Método POST/DELETE requerido.']); exit();
+        }
+
+    }
+    elseif (preg_match('#^' . $base_path . 'api/shorts/feed$#', $clean_uri)) { // API para obtener shorts para el feed dinámicamente
+        if ($request_method === 'GET') {
+            $shortController->getShortsFeedApi();
+            exit();
+        } else {
+            http_response_code(405);
+            echo "Método no permitido para /api/shorts/feed.";
+            exit();
+        }
+    }
+
+    elseif (preg_match('#^' . $base_path . 'short/toggle_like$#', $clean_uri)) {
+        if ($request_method === 'POST') {
+            $shortController->toggleShortLike();
+            exit();
+        } else {
+            http_response_code(405); header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Método POST requerido.']); exit();
+        }
+    }
+    elseif (preg_match('#^' . $base_path . 'short/add_comment$#', $clean_uri)) {
+        if ($request_method === 'POST') {
+            $shortController->addShortComment();
+            exit();
+        } else {
+            http_response_code(405); header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Método POST requerido.']); exit();
+        }
+    }
+    elseif (preg_match('#^' . $base_path . 'api/short/comments$#', $clean_uri)) { // API para obtener comentarios
+        if ($request_method === 'GET') {
+            $shortController->getShortCommentsApi();
+            exit();
+        } else {
+            http_response_code(405); header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Método GET requerido.']); exit();
+        }
+    }
+
+    elseif (preg_match('#^' . $base_path . 'api/product/edit/(\d+)$#', $clean_uri, $matches)) {
+        if ($request_method === 'GET') {
+            $productId = (int)$matches[1];
+            $productController->getProductDataForEdit($productId); // Llama al nuevo método
+            exit();
+        } else {
+            http_response_code(405);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Método GET requerido para obtener datos de edición.']);
+            exit();
+        }
+    }
+    
+
+    elseif (preg_match('#^' . $base_path . 'product/edit/(\d+)$#', $clean_uri, $matches)) {
+        if ($request_method === 'GET') {
+            $productId = (int)$matches[1];
+            $productController->edit($productId); // Llama al método edit en ProductController
+            exit();
+        } else {
+            http_response_code(405); // Método no permitido
+            // Considera mostrar una página de error 405
+            echo "Método GET requerido para ver el formulario de edición.";
+            exit();
+        }
+    }
+    // Procesar la actualización de un producto (cuando se envía el formulario de edición)
+    elseif (preg_match('#^' . $base_path . 'product/update/(\d+)$#', $clean_uri, $matches)) {
+        if ($request_method === 'POST') {
+            $productId = (int)$matches[1];
+            $productController->update($productId); // Llama al método update en ProductController
+            exit();
+        } else {
+            http_response_code(405);
+            header('Content-Type: application/json'); // Asumiendo que update responde JSON
+            echo json_encode(['success' => false, 'message' => 'Método POST requerido para actualizar el producto.']);
+            exit();
+        }
+    }
+    // Procesar la eliminación de un producto
+    elseif (preg_match('#^' . $base_path . 'product/delete/(\d+)$#', $clean_uri, $matches)) {
+        // El JS que te di para el botón de eliminar en product.php hace un POST
+        if ($request_method === 'POST') { 
+            $productId = (int)$matches[1];
+            $productController->delete($productId); // Llama al método delete en ProductController
+            exit();
+        } else {
+            http_response_code(405);
+            header('Content-Type: application/json'); // Asumiendo que delete responde JSON
+            echo json_encode(['success' => false, 'message' => 'Método POST requerido para eliminar el producto.']);
+            exit();
+        }
+    }
+
+    elseif ($clean_uri === $base_path . 'product/create') {
+        if ($request_method === 'POST') {
+             $productController->store();
              exit();
         } else {
             http_response_code(405); echo "Método no permitido para /product/create."; exit();
         }
     }
-
-    elseif ($clean_uri === $base_path . 'search') {
+    elseif (preg_match('#^' . $base_path . 'product/(\d+)$#', $clean_uri, $matches)) {
         if ($request_method === 'GET') {
-            // Obtener el query de $_GET
-            $searchQuery = $_GET['query'] ?? '';
-            // $searchController = new SearchController(); // Asegúrate de instanciar
-            // $searchController->performSearch($base_path, $searchQuery);
-            echo "Página de Búsqueda (Ruta funcional, pendiente de implementación). Query: '" . htmlspecialchars($searchQuery) . "'"; // Salida Temporal
+            $productId = (int)$matches[1];
+            $productController->show($productId);
             exit();
         } else {
-            http_response_code(405); echo "Método no permitido para /search (Se espera GET)."; exit();
+            http_response_code(405); echo "Método no permitido para /product/{id}."; exit();
         }
     }
 
+    elseif ($clean_uri === $base_path . 'product/toggle_favorite') { // Ruta para AJAX
+        if ($request_method === 'POST') {
+            $productController->toggleFavorite(); // Llama al nuevo método en ProductController
+            exit();
+        } else {
+            http_response_code(405); // Método no permitido
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Método POST requerido para la acción de favorito.']);
+            exit();
+        }
+    }
+
+     elseif ($clean_uri === $base_path . 'marketplace') { // Esta es la ruta general para mostrar el marketplace
+        if ($request_method === 'GET') {
+             $productController->showMarketplace($base_path); // Este método debe existir y mostrar la vista
+             exit();
+        } else {
+            http_response_code(405); echo "Método no permitido para /marketplace."; exit();
+        }
+    }
+
+
+    // --- Rutas de Publicaciones (Posts) ---
+    // (Tu bloque de rutas de post existente, parece estar bien)
     elseif (preg_match('#^' . $base_path . 'post/update/(\d+)$#', $clean_uri, $matches)) { 
         if ($request_method === 'POST') {
             $postId = (int)$matches[1];
@@ -223,7 +539,7 @@
         exit();
     }
     elseif (preg_match('#^' . $base_path . 'post/delete/(\d+)$#', $clean_uri, $matches)) { 
-        if ($request_method === 'POST' || $request_method === 'DELETE') {
+        if ($request_method === 'POST' || $request_method === 'DELETE') { // DELETE es más semántico para borrado
             $postId = (int)$matches[1];
             $postController->delete($postId); 
         } else {
@@ -249,11 +565,20 @@
         exit();
     }
     elseif (preg_match('#^' . $base_path . 'post/(\d+)/unlike$#', $clean_uri, $matches)) {
-        if ($request_method === 'POST' || $request_method === 'DELETE') {
+        if ($request_method === 'POST' || $request_method === 'DELETE') { // DELETE es más semántico
             $postId = (int)$matches[1];
             $postController->unlike($postId);
         } else {
-            http_response_code(405); echo "Método no permitido para /post/{id}/unlike (se requiere POST o DELETE).";
+            http_response_code(405); echo "Método no permitido para /post/{id}/unlike.";
+        }
+        exit();
+    }
+    elseif (preg_match('#^' . $base_path . 'post/(\d+)/comments$#', $clean_uri, $matches)) { // Obtener comentarios
+        if ($request_method === 'GET') {
+            $postId = (int)$matches[1];
+            $postController->getPostComments($postId); // Nuevo método en PostController
+        } else {
+            http_response_code(405); echo "Método no permitido para /post/{id}/comments.";
         }
         exit();
     }
@@ -266,31 +591,61 @@
         }
         exit();
     }
-    elseif (preg_match('#^' . $base_path . 'post/(\d+)$#', $clean_uri, $matches)) {
+    elseif (preg_match('#^' . $base_path . 'post/(\d+)$#', $clean_uri, $matches)) { // Ver un post específico
         if ($request_method === 'GET') {
             $postId = (int)$matches[1];
-            $postController->show($postId);
+            $postController->show($postId); // Asumo que este método existe y muestra un post
         } else {
             http_response_code(405); echo "Método no permitido para /post/{id}.";
         }
         exit();
     }
-    
-    // --- Rutas de Reels (Shorts) --- // <<< Pendiente >>>
-    // elseif (preg_match(...)) { ... }
 
-    // --- Rutas de Marketplace (Products) --- // <<< Pendiente >>>
-    // elseif (preg_match(...)) { ... }
+    elseif (preg_match('#^' . $base_path . 'insights/interaction-types$#', $clean_uri)) {
+        if ($request_method === 'GET') {
+            // Asumiendo que tu método en InsightsController es getInteractionSummary()
+            $insightsController->getInteractionSummary(); // O getInteractionTypes() si lo cambiaste
+            exit();
+        }
+    }
+    elseif (preg_match('#^' . $base_path . 'insights/hourly-activity$#', $clean_uri)) {
+        if ($request_method === 'GET') {
+            // Asumiendo que tu método es getHourlyActivitySummary()
+            $insightsController->getHourlyActivitySummary(); // O getHourlyActivity()
+            exit();
+        }
+    }
 
-    // --- Manejador 404 (Not Found) ---
+    // --- AÑADIR ESTAS NUEVAS RUTAS ---
+    elseif (preg_match('#^' . $base_path . 'insights/demographics$#', $clean_uri)) {
+        if ($request_method === 'GET') {
+            // Necesitas un método en InsightsController, ej. getDemographicsData()
+            $insightsController->getDemographicsData(); // Asegúrate que este método exista
+            exit();
+        }
+    }
+    elseif (preg_match('#^' . $base_path . 'insights/follower-evolution$#', $clean_uri)) {
+        if ($request_method === 'GET') {
+            // Necesitas un método en InsightsController, ej. getFollowerEvolutionData()
+            $insightsController->getFollowerEvolutionData(); // Asegúrate que este método exista
+            exit();
+        }
+    }
+    elseif (preg_match('#^' . $base_path . 'insights/top-content$#', $clean_uri)) { // Cambié de top-posts a top-content para coincidir con el JS
+        if ($request_method === 'GET') {
+            // Asumiendo que tu método es getTopPostsSummary() o crea uno nuevo
+            $insightsController->getTopPostsSummary(); // O getTopContentData() si lo prefieres
+            exit();
+        }
+    }
+
     else {
         http_response_code(404);
         error_log("404 Not Found: " . $request_uri . " (Clean URI: " . $clean_uri . ")");
-        // Considera cargar una vista de error bonita
         if (file_exists(__DIR__ . '/Views/errors/404.php')) {
              include __DIR__ . '/Views/errors/404.php';
         } else {
-            echo "Página no encontrada";
+            echo "Página no encontrada (Error 404)";
         }
         exit();
     }
